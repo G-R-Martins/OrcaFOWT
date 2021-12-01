@@ -1,4 +1,7 @@
 database/
+*.sim
+*.yml
+*.dll
 
 .vscode/
 __pycache__/
