@@ -28,7 +28,25 @@ def get_range_size(opt) -> int:
     return int(float(opt["to"] - opt["from"]) / float(opt["step"])) + 1
 
 
-def export_results(data, filename, formats, predicate="csv") -> None:
+def get_range_or_list(opt):
+
+    if isinstance(opt, dict):
+        if not opt.get("from") or not opt.get("to") or not opt.get("step"):
+            print("Range defined incorrectly")
+            print("It must be keywords 'from', 'to' and 'step'")
+        return np.arange(opt["from"], opt["to"] + opt["step"], opt["step"])
+
+    if isinstance(opt, list):
+        return opt
+
+    return [opt]
+
+
+def flatten_dict_into_list(d) -> list:
+    return [(k, v) for k, v in d.items()]
+
+
+def export_results(data, filename, formats, predicate="") -> None:
 
     if "excel" in formats:
         data.to_excel(filename + predicate + ".xlsx")

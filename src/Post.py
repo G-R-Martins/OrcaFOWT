@@ -111,7 +111,6 @@ class Post:
                 self.results["dynamics"][col_name] = line.TimeHistory(
                     "Effective tension", Post.period, orca.oeNodeNum(node)
                 )
-
             return None
 
         if "fairleads" in points:

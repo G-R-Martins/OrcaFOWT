@@ -1,3 +1,4 @@
+from collections import namedtuple
 import OrcFxAPI as orca
 from Analysis import Analysis
 import AuxFunctions as aux
@@ -606,7 +607,7 @@ class OrcaflexModel:
     def set_orcaflex_objects_ref(self) -> None:
         # Starts references with '1'
         cur_line = cur_line_type = 1
-        # cur_vessel = cur_vessel_type = 1
+        cur_vessel = cur_vessel_type = 1
         cur_tower = cur_tower_sec = 1
         # cur_buoy = cur_constraint = cur_morison = 1
         # cur_external_function
@@ -621,7 +622,7 @@ class OrcaflexModel:
                     self.orca_refs["lines"][cur_line] = obj
                     cur_line += 1
 
-            if obj.type == orca.otLineType:
+            elif obj.type == orca.otLineType:
                 if "tower" in obj.Name.lower():
                     self.orca_refs["tower_sections"][cur_tower_sec] = obj
                     cur_tower_sec += 1
@@ -629,57 +630,64 @@ class OrcaflexModel:
                     self.orca_refs["line_types"][cur_line_type] = obj
                     cur_line_type += 1
 
-            if obj.type == orca.otTurbine:
+            elif obj.type == orca.otTurbine:
                 self.orca_refs["turbines"][cur_turbine] = obj
+                cur_turbine += 1
+
+            elif obj.type == orca.otVessel or (
+                obj.type == orca.otConstraint and "platform" in obj.Name.lower()
+            ):
+                self.orca_refs["vessels"][cur_vessel] = obj
+                cur_vessel += 1
+
+            elif obj.type == orca.otVesselType:
+                self.orca_refs["vessel_types"][cur_vessel_type] = obj
+                cur_vessel_type += 1
+
             # TODO
-            # "vessels": dict(),
-            # "vessel_types": dict(),
             # "buoys": dict(),
             # "constraints": dict(),
             # "morison": dict(),
             # "turbines": dict(),
             # "external_functions": dict(),
 
-    def save(self, io, post) -> None:
-        io_data = io.input_data
-        # Orcaflex input data
-        if io.save_options["Orcaflex data"]:
-            print("\nSaving *.yml file . . .")
-            filename = io.input_file_name + ".yml"
-            if io_data.get("File IO") and io_data["File IO"].get("input"):
-                filename = io_data["File IO"]["output"].get(
-                    "Orcaflex data", io.input_file_name
-                )
-            self.model.SaveData(io.output_dir + filename)
-        # Orcaflex simulation
-        if io.save_options["Orcaflex simulation"]:
-            print("\nSaving *.sim file . . .")
-            filename = io.input_file_name + ".sim"
-            if io_data.get("File IO") and io_data["File IO"].get("output"):
-                filename = io_data["File IO"]["output"].get(
-                    "Orcaflex sim", io.input_file_name
-                )
-            self.model.SaveSimulation(io.output_dir + filename)
+    def set_vessel_harmonic_motion(self, dof_data: namedtuple) -> None:
+        vessel = self.orca_refs["vessels"][1]
 
-        # Post processing results
-        if io.save_options["results"]:
-            print("\nExporting results . . .")
-            # File name without extension
-            filename = io.output_dir + io.input_file_name
+        # Redefine all variables as zero
+        self.reset_harmonic_motion(vessel)
 
-            # Format to save
-            formats = post.formats
-            # If no format was defined, no data is saved
-            if not formats:
-                return None
+        vessel.HarmonicMotionPeriod = (dof_data.period,)
 
-            res = post.results
-            for sim in ["statics", "dynamics", "modal"]:
-                if not formats.get(sim) or res[sim].empty:
-                    continue
-                aux.export_results(res[sim], filename, formats[sim], "_" + sim)
+        if dof_data.name == "Surge":
+            vessel.HarmonicMotionSurgeAmplitude = (dof_data.amplitude,)
+            vessel.HarmonicMotionSurgePhase = (dof_data.phase,)
+        elif dof_data.name == "Sway":
+            vessel.HarmonicMotionSwayAmplitude = (dof_data.amplitude,)
+            vessel.HarmonicMotionSwayPhase = (dof_data.phase,)
+        elif dof_data.name == "Heave":
+            vessel.HarmonicMotionHeaveAmplitude = (dof_data.amplitude,)
+            vessel.HarmonicMotionHeavePhase = (dof_data.phase,)
+        elif dof_data.name == "Roll":
+            vessel.HarmonicMotionRollAmplitude = (dof_data.amplitude,)
+            vessel.HarmonicMotionRollPhase = (dof_data.phase,)
+        elif dof_data.name == "Pitch":
+            vessel.HarmonicMotionPitchAmplitude = (dof_data.amplitude,)
+            vessel.HarmonicMotionPitchPhase = (dof_data.phase,)
+        elif dof_data.name == "Yaw":
+            vessel.HarmonicMotionYawAmplitude = (dof_data.amplitude,)
+            vessel.HarmonicMotionYawPhase = (dof_data.phase,)
 
-            if formats.get("batch") and not post.batch_results.empty:
-                aux.export_results(
-                    post.batch_results, filename, formats["batch"], "_batch"
-                )
+    def reset_harmonic_motion(self, vessel) -> None:
+        vessel.HarmonicMotionSurgeAmplitude = (0.0,)
+        vessel.HarmonicMotionSurgePhase = (0.0,)
+        vessel.HarmonicMotionSwayAmplitude = (0.0,)
+        vessel.HarmonicMotionSwayPhase = (0.0,)
+        vessel.HarmonicMotionHeaveAmplitude = (0.0,)
+        vessel.HarmonicMotionHeavePhase = (0.0,)
+        vessel.HarmonicMotionRollAmplitude = (0.0,)
+        vessel.HarmonicMotionRollPhase = (0.0,)
+        vessel.HarmonicMotionPitchAmplitude = (0.0,)
+        vessel.HarmonicMotionPitchPhase = (0.0,)
+        vessel.HarmonicMotionYawAmplitude = (0.0,)
+        vessel.HarmonicMotionYawPhase = (0.0,)

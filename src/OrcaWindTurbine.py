@@ -16,7 +16,7 @@ def main():
     t0 = datetime.now()  # Start counting time
 
     # Read input file
-    io.read_input("FOWTC-EvalThrust")
+    io.read_input("teste-cabo")
 
     # Reference model
     orca_model = OrcaflexModel(io.actions, io.save_options)
@@ -27,7 +27,7 @@ def main():
         batch.execute_batch(orca_model, post, io)
 
     # Save requested data
-    orca_model.save(io, post)
+    io.save(orca_model, post)
 
     # Show total elapsed time
     print("\nElapsed time: {}".format(datetime.now() - t0))
