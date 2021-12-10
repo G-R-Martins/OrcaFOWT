@@ -29,7 +29,6 @@ def get_range_size(opt) -> int:
 
 
 def get_range_or_list(opt):
-
     if isinstance(opt, dict):
         if not opt.get("from") or not opt.get("to") or not opt.get("step"):
             print("Range defined incorrectly")
@@ -44,6 +43,10 @@ def get_range_or_list(opt):
 
 def flatten_dict_into_list(d) -> list:
     return [(k, v) for k, v in d.items()]
+
+
+def get_ith_key(d: dict, i: int) -> any:
+    return list(d.keys())[i]
 
 
 def export_results(data, filename, formats, predicate="") -> None:

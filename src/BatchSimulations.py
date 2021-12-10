@@ -1,73 +1,27 @@
-from collections import namedtuple
-import AuxFunctions as aux
+# OrcaWindTurbine imports
 from IO import IO
-import pandas as pd
-import numpy as np
-from itertools import product
+import AuxFunctions as aux
 
-# Types of batch evaluation implemented
-THRUST_CURVE = 0
-SUPERIMPOSED_MOTION = 1
+# Other imports
+from collections import namedtuple
+from itertools import product
+import numpy as np
 
 
 class BatchSimulations:
-    def __init__(self, options, post) -> None:
-        self.period = post.set_result_period(post.period)
+    def __init__(self, post):
+        # Post options -> plot definitions and period
+        post.set_options(IO.input_data["PostProcessing"])
+
+
+class ThrustCurve(BatchSimulations):
+    def __init__(self, post):
+        super().__init__(post)
+
+        # Input options
+        opt = IO.input_data["Batch"]["thrust curve"]
 
         # wind
-        self.eval_range: np.ndarray
-        self.vars_to_eval: list[str]
-        self.wind_direction: float = 0.0
-        self.profile: dict
-        # superimposed motion
-        self.combine_dofs = False
-        self.dof_motion = dict()
-        self.dofs_to_oscilate: list
-
-        # Saving options
-        if options.get("save all"):
-            self.save_all_orca_input = options["save all"].get("Orcaflex data", False)
-            self.save_all_orca_sim = options["save all"].get(
-                "Orcaflex simulations", False
-            )
-        else:
-            self.save_all_orca_sim, self.save_all_orca_input = False, False
-
-        if options.get("thrust curve"):
-            self.eval_type = THRUST_CURVE
-            self.set_thrust_options(options["thrust curve"])
-            return None
-
-        if options.get("superimposed motion"):
-            self.eval_type = SUPERIMPOSED_MOTION
-            self.set_superimposed_options(options["superimposed motion"])
-            return None
-
-    def execute_batch(self, orca_model, post, io):
-        # Post options -> plot definitions and period
-        post.set_options(io.input_data["PostProcessing"])
-
-        print()  # blank line
-
-        save_opt = {
-            "data": io.save_options["batch data"],
-            "simulation": io.save_options["batch simulation"],
-        }
-
-        if self.eval_type == THRUST_CURVE:
-            self.eval_thrust_curve(orca_model, post, save_opt)
-        if self.eval_type == SUPERIMPOSED_MOTION:
-            self.impose_motion(orca_model, post, save_opt, io)
-
-        if io.actions["plot results"]:
-            post.plot.plot_batch(post, self)
-
-    # ================ #
-    #   Thrust curve   #
-    # ================ #
-
-    def set_thrust_options(self, opt: dict):
-
         self.eval_range = np.arange(
             opt["wind speed"]["from"],
             opt["wind speed"]["to"] + opt["wind speed"]["step"],
@@ -76,11 +30,24 @@ class BatchSimulations:
         self.vars_to_eval = [
             "Rotor aero " + k.title() for k, v in opt["curves"].items() if v
         ]
-
         self.wind_direction = opt.get("direction", 0.0)
-        self.profile = opt["wind profile"]
+        self.profile = opt.get("wind profile", None)
 
-    def eval_thrust_curve(self, orca_model, post, save_opt):
+    def execute_batch(self, orca_model, post):
+        print()  # blank line
+
+        self.eval_thrust_curve(orca_model, post)
+
+        if IO.actions["plot results"]:
+            post.plot.plot_batch(post, self)
+
+    # ================ #
+    #                  #
+    #   Thrust curve   #
+    #                  #
+    # ================ #
+
+    def eval_thrust_curve(self, orca_model, post):
 
         # Iterate speeds
         for speed in self.eval_range:
@@ -99,7 +66,9 @@ class BatchSimulations:
 
             # Save
             IO.save_step_from_batch(
-                orca_model.model, "wind_speed_" + str(speed), save_opt
+                orca_model.model,
+                "wind_speed_" + str(speed),
+                post,
             )
 
             # Get results
@@ -110,48 +79,34 @@ class BatchSimulations:
         # Mount curves data
         post.set_thrust_curves(self.vars_to_eval, self.eval_range)
 
-    # ===================== #
-    #  Superimposed motion  #
-    # ===================== #
+    # ======================== #
+    #                          #
+    #  Vessel harmonic motion  #
+    #                          #
+    # ======================== #
 
-    def set_superimposed_options(self, opt) -> None:
+
+class VesselHarmonicMotion(BatchSimulations):
+    def __init__(self, post):
+        super().__init__(post)
+
+        # Input options
+        opt = IO.input_data["Batch"]["vessel harmonic motion"]
 
         self.combine_dofs = opt.get("combine dofs", False)
         self.dof_motion = opt["motion"]
         self.dofs_to_oscilate = list(opt["motion"].keys())
 
-    def get_all_combinations(self):
+    def execute_batch(self, orca_model, post):
+        print()  # blank line
 
-        # Specify motion for each DoF individually
-        # if not self.combine_dofs:
-        comb = dict(
-            {
-                "surge": [(0.0, 0.0, 0.0)],
-                "sway": [(0.0, 0.0, 0.0)],
-                "heave": [(0.0, 0.0, 0.0)],
-                "roll": [(0.0, 0.0, 0.0)],
-                "pitch": [(0.0, 0.0, 0.0)],
-                "yaw": [(0.0, 0.0, 0.0)],
-            }
-        )
-        for dof in comb:
-            data = self.dof_motion.get(dof)
-            # if is defined, update the combination in the dict 'comb'
-            if data:
-                comb[dof] = self.get_dof_combinations(data)
+        self.impose_motion(orca_model, post)
 
-        return comb
+        if IO.actions["plot results"]:
+            post.plot.plot_batch(post, self)
 
-    def get_dof_combinations(self, options):
-        return product(
-            aux.get_range_or_list(options["period"]),
-            aux.get_range_or_list(options["amplitude"]),
-            aux.get_range_or_list(options["phase"]),
-        )
-
-    def impose_motion(self, orca_model, post, save_opt, io) -> None:
+    def impose_motion(self, orca_model, post) -> None:
         DoF = namedtuple("DoF", ["name", "period", "amplitude", "phase"])
-        save_opt = io.save_options
         vessel = orca_model.orca_refs["vessels"][1]
         vessel.SuperimposedMotion = "Displacement RAOs + harmonic motion"
 
@@ -174,11 +129,39 @@ class BatchSimulations:
 
                 # Get results
                 post.process_simulation_results(
-                    io.input_data["PostProcessing"],
                     orca_model.orca_refs.get("lines", None),
                     orca_model.orca_refs.get("vessels", None),
                 )
 
                 # Save
-                file_name = f"{dof}_period{data[0]}_ampl{data[1]}_phase{data[2]}"
-                IO.save_step_from_batch(orca_model.model, file_name, save_opt, post)
+                file_name = dof + f"_period{data[0]}_ampl{data[1]}_phase{data[2]}"
+                IO.save_step_from_batch(orca_model.model, file_name, post)
+
+    def get_all_combinations(self):
+
+        # Specify motion for each DoF individually
+        # if not self.combine_dofs:
+        combs = dict(
+            {
+                "surge": [(0.0, 0.0, 0.0)],
+                "sway": [(0.0, 0.0, 0.0)],
+                "heave": [(0.0, 0.0, 0.0)],
+                "roll": [(0.0, 0.0, 0.0)],
+                "pitch": [(0.0, 0.0, 0.0)],
+                "yaw": [(0.0, 0.0, 0.0)],
+            }
+        )
+        for dof in combs:
+            data = self.dof_motion.get(dof)
+            # if is defined, update the combination in the dict 'combs'
+            if data:
+                combs[dof] = self.get_dof_combinations(data)
+
+        return combs
+
+    def get_dof_combinations(self, input_options):
+        return product(
+            aux.get_range_or_list(input_options["period"]),
+            aux.get_range_or_list(input_options["amplitude"]),
+            aux.get_range_or_list(input_options["phase"]),
+        )

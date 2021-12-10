@@ -2,6 +2,7 @@ from collections import namedtuple
 import OrcFxAPI as orca
 from Analysis import Analysis
 import AuxFunctions as aux
+from IO import IO
 
 # import numpy as np
 
@@ -9,12 +10,12 @@ import AuxFunctions as aux
 class OrcaflexModel:
     """[summary]"""
 
-    def __init__(self, actions, save_options) -> None:
+    def __init__(self) -> None:
         # Readed options used to set Orcaflex model
-        if actions is not None:
-            self.actions: dict[str, bool] = actions
-        if save_options is not None:
-            self.save_options: dict[str, bool] = save_options
+        if IO.actions is not None:
+            self.actions: dict[str, bool] = IO.actions
+        if IO.save_options is not None:
+            self.save_options: dict[str, bool] = IO.save_options
 
         self.model = orca.Model()
         self.analysis: Analysis
@@ -37,55 +38,53 @@ class OrcaflexModel:
             "external_functions": dict(),
         }
 
-    def execute_options(self, io, post) -> None:
+    def execute_options(self, post) -> None:
         if self.actions["load data"]:
             print("\nLoading data . . .")
-            inp = io.input_data["File IO"]["input"]
+            inp = IO.input_data["File IO"]["input"]
             self.model.LoadData(inp.get("dir", "./") + inp["Orcaflex data"])
             # Organize objects references in the dict 'orca_refs'
             self.set_orcaflex_objects_ref()
 
         if self.actions["load simulation"]:
             print("\nLoading simulation . . .")
-            sim = io.input_data["File IO"]["input"]
-            self.model.LoadSimulation(sim.get("dir", "./") + sim["Orcaflex sim"])
+            sim = IO.input_data["File IO"]["input"]
+            sim_name = sim.get("dir", "./") + sim["Orcaflex sim"]
+            self.model.LoadSimulation(sim_name)
             # Organize objects references in the dict 'orca_refs'
             self.set_orcaflex_objects_ref()
 
         if self.actions["generate model"]:
             print("\nGenerating model . . .")
-            self.generate_model(io.input_data)
+            self.generate_model()
 
         ana_opt = ["run statics", "run dynamics", "run modal"]
+        actions = IO.input_data["Actions"]
         self.analysis = Analysis(
             self.model.general,
-            [
-                opt in io.input_data["Actions"].keys() and io.input_data["Actions"][opt]
-                for opt in ana_opt
-            ],
-            io.input_data.get("Analysis"),
+            [opt in actions.keys() and actions[opt] for opt in ana_opt],
             self.orca_refs,
         )
-        # If simulations are supposed to be runned in batch, return to main...
+        # If simulations are supposed to be runned in batch, return ...
         if self.actions.get("batch simulations", None):
-            # The running and posprocessing are managed from BatchSimulations object
+            # BatchSimulations object manages the execution
             return None
         # ...otherwise, run and postprocess directly from OrcaflexModel members
         self.analysis.run_simulation(self.model, post.results)
 
         if self.actions["postprocess results"]:
             print("\nPost processing results . . .")
-            post.set_options(io.input_data["PostProcessing"])
+            post.set_options(IO.input_data["PostProcessing"])
             post.process_simulation_results(
-                io.input_data["PostProcessing"],
                 self.orca_refs.get("lines", None),
                 self.orca_refs.get("vessels", None),
             )
             if self.actions["plot results"]:
                 post.plot.plot_simulation_results(post)
 
-    def generate_model(self, data: dict) -> None:
+    def generate_model(self) -> None:
 
+        data = IO.input_data
         if data.get("Environment"):
             self.set_environment(data["Environment"])
 
@@ -97,11 +96,16 @@ class OrcaflexModel:
 
         if data.get("Lines") is not None:
             self.generate_lines(
-                data.get("Lines"), data.get("Keypoints"), data.get("Segment Set")
+                data.get("Lines"),
+                data.get("Keypoints"),
+                data.get("Segment Set"),
             )
 
         if data.get("Towers") is not None:
-            self.generate_towers(data["Towers"], data.get("Tower sections", None))
+            self.generate_towers(
+                data["Towers"],
+                data.get("Tower sections", None),
+            )
 
     # Functions to set/edit Orcaflex Environment objects
 
@@ -115,7 +119,10 @@ class OrcaflexModel:
             self.set_seabed(seabed)
 
         # Sea current
-        self.set_sea_current(env_data["water depth"], env_data.get("sea current", None))
+        self.set_sea_current(
+            env_data["water depth"],
+            env_data.get("sea current", None),
+        )
 
         # Wave
         self.set_wave(env_data.get("wave", None))
@@ -281,7 +288,7 @@ class OrcaflexModel:
                     env.WaveSeed = aux.get_seed(seed_option)
             # Components
             env.WaveSpectrumMinRelFrequency = wave["frequency"].get("min", 0.5)
-            env.WaveSpectrumMaxRelFrequency = wave["frequency"].get("max", 10.0)
+            env.WaveSpectrumMaxRelFrequency = wave["frequency"].get("max", 10)
 
         # User spectrum
         elif wave["type"] == "user spectrum":
@@ -304,12 +311,12 @@ class OrcaflexModel:
             env.WaveType = "User specified components"
 
             # Components
-            n_components = len(wave["frequency"])
-            env.WaveNumberOfUserSpecifiedComponents = n_components
+            n = len(wave["frequency"])
+            env.WaveNumberOfUserSpecifiedComponents = n
             env.WaveUserSpecifiedComponentFrequency = wave["frequency"]
             env.WaveUserSpecifiedComponentPeriod = wave["period"]
             env.WaveUserSpecifiedComponentAmplitude = wave["amplitude"]
-            env.WaveUserSpecifiedComponentPhaseLag = aux.get_random_floats(n_components)
+            env.WaveUserSpecifiedComponentPhaseLag = aux.get_random_floats(n)
 
         # Same for all wave types
         env.WaveDirection = wave.get("direction", 0.0)
@@ -399,12 +406,12 @@ class OrcaflexModel:
             env.WindDirection = wind["direction"]
             env.WindTimeOrigin = wind.get("time origin", 0.0)
             # Components
-            n_components = len(wind["frequency"])
-            env.WindNumberOfUserSpecifiedComponents = n_components
+            n = len(wind["frequency"])
+            env.WindNumberOfUserSpecifiedComponents = n
             env.WindUserSpecifiedComponentFrequency = wind["frequency"]
             env.WindUserSpecifiedComponentPeriod = wind["period"]
             env.WindUserSpecifiedComponentAmplitude = wind["amplitude"]
-            env.WindUserSpecifiedComponentPhaseLag = aux.get_random_floats(n_components)
+            env.WindUserSpecifiedComponentPhaseLag = aux.get_random_floats(n)
 
         # Same parameters for all wind types
         env.AirDensity = wind.get("density", 0.00122)
@@ -439,13 +446,14 @@ class OrcaflexModel:
 
             # Parameters
             constraint.Connection = "Fixed"
-            if it["constraint type"]["imposed motion"]:
+            cons_type = it["constraint type"]
+            if cons_type["imposed motion"]:
                 constraint.ConstraintType = "Imposed motion"
                 constraint.TimeHistoryDataSource = "External"
-                constraint.TimeHistoryFileName = it["constraint type"]["file name"]
+                constraint.TimeHistoryFileName = cons_type["file name"]
                 # it['constraint type']['file name']
                 # './database/' + it['constraint type']['file name']
-                constraint.TimeHistoryInterpolation = it["constraint type"].get(
+                constraint.TimeHistoryInterpolation = cons_type.get(
                     "interpolation", "Cubic spline"
                 )
             # else:
@@ -461,7 +469,12 @@ class OrcaflexModel:
             self.orca_refs["vessels"][cont] = constraint
             cont += 1
 
-    def generate_lines(self, lines: list, end_points: list, segment_sets: list) -> None:
+    def generate_lines(
+        self,
+        lines: list,
+        end_points: list,
+        segment_sets: list,
+    ) -> None:
         cont = 1
         for it in lines:
             # Initialize line
@@ -481,24 +494,22 @@ class OrcaflexModel:
                 connectionA = self.orca_refs["vessels"][it["platform"][0]].Name
                 connectionB = self.orca_refs["vessels"][it["platform"][1]].Name
 
-            coords = end_points[keypoint][it["ends"][1] - 1]
-            line.EndBX, line.EndBY, line.EndBZ = coords[0], coords[1], coords[2]
+            coord = end_points[keypoint][it["ends"][1] - 1]
+            line.EndBX, line.EndBY, line.EndBZ = coord
             line.EndBConnection = connectionB
 
             # Fairlead
-            coords = end_points["fairleads"][it["ends"][0] - 1]
-            line.EndAX, line.EndAY, line.EndAZ = coords[0], coords[1], coords[2]
-
+            coord = end_points["fairleads"][it["ends"][0] - 1]
+            line.EndAX, line.EndAY, line.EndAZ = coord
             line.EndAConnection = connectionA
 
-            line.Length = [seg["length"] for seg in segment_sets[it["segment set"] - 1]]
+            segset = it["segment set"] - 1  # segment set id
 
+            line.Length = [seg["length"] for seg in segment_sets[segset]]
             line.TargetSegmentLength = [
-                seg["target length"] for seg in segment_sets[it["segment set"] - 1]
+                seg["target length"] for seg in segment_sets[segset]
             ]
-
-            line.LineType = [seg["type"] for seg in segment_sets[it["segment set"] - 1]]
-
+            line.LineType = [seg["type"] for seg in segment_sets[segset]]
             line.StaticsSeabedFrictionPolicy = "None"
 
             # Save reference to current line
@@ -529,7 +540,7 @@ class OrcaflexModel:
             lin_type.Cax, lin_type.Caz = data["Cax"], data["Caz"]
             # lin_type.Cmx, lin_type.Cmy, lin_type.Cmz = \
             #     it['Cmx'], it['Cmy'], it['Cmz']
-            lin_type.SeabedNormalFrictionCoefficient = data["friction"]["normal"]
+            lin_type.SeabedLateralFrictionCoefficient = data["friction"]["lateral"]
             # lin_type.SeabedAxialFrictionCoefficient = it['friction']['axial']
 
             self.orca_refs["line_types"][cont] = lin_type
@@ -551,17 +562,17 @@ class OrcaflexModel:
             # Edit parameters
 
             tower.EndAConnection = it["nacelle"]["id"]
-            coords = it["nacelle"]["end"]
-            tower.EndAX, tower.EndAY, tower.EndAZ = coords[0], coords[1], coords[2]
+            coord = it["nacelle"]["end"]
+            tower.EndAX, tower.EndAY, tower.EndAZ = coord
             tower.EndAAzimuth, tower.EndADeclination, tower.EndAGamma = (
-                coords[3],
-                coords[4],
-                coords[5],
+                coord[3],
+                coord[4],
+                coord[5],
             )
 
             tower.EndBConnection = it["platform"]["id"]
             coords = it["nacelle"]["end"]
-            tower.EndBX, tower.EndBY, tower.EndBZ = coords[0], coords[1], coords[2]
+            tower.EndBX, tower.EndBY, tower.EndBZ = coords
             tower.EndBAzimuth, tower.EndBDeclination, tower.EndBGamma = (
                 coords[3],
                 coords[4],
@@ -648,7 +659,6 @@ class OrcaflexModel:
             # "buoys": dict(),
             # "constraints": dict(),
             # "morison": dict(),
-            # "turbines": dict(),
             # "external_functions": dict(),
 
     def set_vessel_harmonic_motion(self, dof_data: namedtuple) -> None:

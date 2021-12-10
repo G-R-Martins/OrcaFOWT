@@ -1,6 +1,7 @@
 import OrcFxAPI as orca
 from Plotting import Plotting
 import pandas as pd
+from IO import IO
 
 
 class Post:
@@ -33,9 +34,9 @@ class Post:
         Post.period = Post.set_result_period(input_definitions.get("period"))
 
     def process_simulation_results(
-        self, options: dict, lines, platforms, towers=None, turbines=None, nacelles=None
+        self, lines, platforms, towers=None, turbines=None, nacelles=None
     ) -> None:
-
+        options: dict = IO.input_data["PostProcessing"]
         if options.get("lines"):
             # TODO: verificar se/de onde tirar o tempo
             if lines is not None:

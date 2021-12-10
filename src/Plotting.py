@@ -35,7 +35,7 @@ class Plotting:
         # -> bar plot with periods/frequencies and first modes
 
     def plot_batch(self, post, batch) -> None:
-        if batch.eval_type == bs.THRUST_CURVE:
+        if isinstance(batch, bs.ThrustCurve):
             self.plot_thurst_curve(post, batch.vars_to_eval)
 
     def new_plot(

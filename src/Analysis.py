@@ -1,6 +1,7 @@
 import OrcFxAPI as orca
 from pandas import DataFrame
 from collections import namedtuple
+from IO import IO
 
 
 class Analysis:
@@ -8,7 +9,6 @@ class Analysis:
         self,
         general_opt: orca.OrcaFlexObject,
         ana_type: list,
-        analysis_opt: dict,
         object_refs: dict,
     ) -> None:
         self.static, self.dynamic, self.modal = ana_type
@@ -18,7 +18,10 @@ class Analysis:
         self.mode_details: dict[str, list] = {"lines": [], "system": []}
 
         self.set_analysis(
-            general_opt, analysis_opt, object_refs["lines"], object_refs["vessels"]
+            general_opt,
+            IO.input_data.get("Analysis"),
+            object_refs["lines"],
+            object_refs["vessels"],
         )
 
     def set_analysis(
@@ -74,11 +77,11 @@ class Analysis:
     # def run_simulation(self, orca_model: orca.Model, ) -> None:
     def run_simulation(self, Orcaflex, results) -> None:
         if self.static:
-            print("running statics . . .")
+            print("rRunning statics . . .")
             Orcaflex.CalculateStatics()
 
         if self.modal:
-            print("running modal . . .")
+            print("Running modal . . .")
             _id = 1
             for line in self.modes_opt["lines"]:
                 self.mode_details["lines"].append(orca.Modes(line.ref, line.spec))
@@ -102,7 +105,7 @@ class Analysis:
         #     orca_model.Modes(line.ref, line.spec)
 
         if self.dynamic:
-            print("running dynamics . . .")
+            print("Running dynamics . . .")
             # print(getcwd())
             # chdir('./database')
             Orcaflex.RunSimulation()
