@@ -7,15 +7,37 @@ from collections import namedtuple
 from itertools import product
 import numpy as np
 
+from OrcaflexModel import OrcaflexModel
+
 
 class BatchSimulations:
-    def __init__(self, post):
+    """[summary]"""
+
+    def __init__(self, post) -> None:
+        """[summary]
+
+        Args:
+            post (Post): [description]
+        """
         # Post options -> plot definitions and period
         post.set_options(IO.input_data["PostProcessing"])
 
+    # ================ #
+    #                  #
+    #   Thrust curve   #
+    #                  #
+    # ================ #
+
 
 class ThrustCurve(BatchSimulations):
+    """[summary]"""
+
     def __init__(self, post):
+        """[summary]
+
+        Args:
+            post (Post): [description]
+        """
         super().__init__(post)
 
         # Input options
@@ -27,13 +49,20 @@ class ThrustCurve(BatchSimulations):
             opt["wind speed"]["to"] + opt["wind speed"]["step"],
             opt["wind speed"]["step"],
         )
-        self.vars_to_eval = [
-            "Rotor aero " + k.title() for k, v in opt["curves"].items() if v
-        ]
+        self.vars_to_eval, self.names = self.set_vars_to_eval(opt["monitors"])
+        # "Rotor aero " + k.title() for k, v in opt["curves"].items() if v
+        # ]
         self.wind_direction = opt.get("direction", 0.0)
         self.profile = opt.get("wind profile", None)
 
-    def execute_batch(self, orca_model, post):
+    def execute_batch(self, orca_model: OrcaflexModel, post) -> None:
+        """[summary]
+
+        Args:
+            orca_model (OrcaflexModel): [description]
+            post ([type]): [description]
+        """
+
         print()  # blank line
 
         self.eval_thrust_curve(orca_model, post)
@@ -41,13 +70,58 @@ class ThrustCurve(BatchSimulations):
         if IO.actions["plot results"]:
             post.plot.plot_batch(post, self)
 
-    # ================ #
-    #                  #
-    #   Thrust curve   #
-    #                  #
-    # ================ #
+    def set_vars_to_eval(self, opt: dict) -> dict[str, list]:
+        """[summary]
 
-    def eval_thrust_curve(self, orca_model, post):
+        Args:
+            opt (dict): [description]
+
+        Returns:
+            dict[str, list]: [description]
+        """
+
+        to_eval = dict(
+            {
+                "vars": [],
+                "specific blade": [],
+                "specific position": [],
+                "specific blade and position": [],
+            }
+        )
+        var_names = []
+
+        keys = opt.keys()
+
+        if "rotor" in keys:
+            to_eval["vars"].extend(
+                ["Rotor aero " + var_name.title() for var_name in opt["rotor"]]
+            )
+        if "generator" in keys:
+            to_eval["vars"].extend(
+                ["Generator " + var_name for var_name in opt["generator"]]
+            )
+        # other variables defined just with its name (eg Angular Velocity)
+        if "others" in keys:
+            to_eval["vars"].extend([var_name for var_name in opt["others"]])
+
+        var_names.extend(to_eval["vars"])
+
+        if "specific blade" in keys:
+            for data in opt["specific blade"]:
+                to_eval["specific blade"].append((data["vars"], data["id"]))
+                # Get all combinations for (variable, blade id)
+                comb = product(data["vars"], aux.get_range_or_list(data["id"]))
+                var_names.extend([i[0] + " - " + str(i[1]) for i in comb])
+
+        return to_eval, var_names
+
+    def eval_thrust_curve(self, orca_model: OrcaflexModel, post) -> None:
+        """[summary]
+
+        Args:
+            orca_model (OrcaflexModel): [description]
+            post ([type]): [description]
+        """
 
         # Iterate speeds
         for speed in self.eval_range:
@@ -77,7 +151,7 @@ class ThrustCurve(BatchSimulations):
             )
 
         # Mount curves data
-        post.set_thrust_curves(self.vars_to_eval, self.eval_range)
+        post.set_thrust_curves(self.names, self.eval_range)
 
     # ======================== #
     #                          #
@@ -87,7 +161,15 @@ class ThrustCurve(BatchSimulations):
 
 
 class VesselHarmonicMotion(BatchSimulations):
-    def __init__(self, post):
+    """[summary]"""
+
+    def __init__(self, post) -> None:
+        """[summary]
+
+        Args:
+            post (Post): [description]
+        """
+
         super().__init__(post)
 
         # Input options
@@ -97,7 +179,13 @@ class VesselHarmonicMotion(BatchSimulations):
         self.dof_motion = opt["motion"]
         self.dofs_to_oscilate = list(opt["motion"].keys())
 
-    def execute_batch(self, orca_model, post):
+    def execute_batch(self, orca_model: OrcaflexModel, post) -> None:
+        """[summary]
+
+        Args:
+            orca_model (OrcaflexModel): [description]
+            post (Post): [description]
+        """
         print()  # blank line
 
         self.impose_motion(orca_model, post)
@@ -105,7 +193,13 @@ class VesselHarmonicMotion(BatchSimulations):
         if IO.actions["plot results"]:
             post.plot.plot_batch(post, self)
 
-    def impose_motion(self, orca_model, post) -> None:
+    def impose_motion(self, orca_model: OrcaflexModel, post) -> None:
+        """[summary]
+
+        Args:
+            orca_model (OrcaflexModel): [description]
+            post ([type]): [description]
+        """
         DoF = namedtuple("DoF", ["name", "period", "amplitude", "phase"])
         vessel = orca_model.orca_refs["vessels"][1]
         vessel.SuperimposedMotion = "Displacement RAOs + harmonic motion"
@@ -137,7 +231,13 @@ class VesselHarmonicMotion(BatchSimulations):
                 file_name = dof + f"_period{data[0]}_ampl{data[1]}_phase{data[2]}"
                 IO.save_step_from_batch(orca_model.model, file_name, post)
 
-    def get_all_combinations(self):
+    def get_all_combinations(self) -> dict[str, list]:
+        """[summary]
+
+        Returns:
+            dict[str, list[tuple[float, float, float] | itertools.product]]:
+                [description]
+        """
 
         # Specify motion for each DoF individually
         # if not self.combine_dofs:
@@ -159,7 +259,15 @@ class VesselHarmonicMotion(BatchSimulations):
 
         return combs
 
-    def get_dof_combinations(self, input_options):
+    def get_dof_combinations(self, input_options: dict) -> product:
+        """[summary]
+
+        Args:
+            input_options (dict): [description]
+
+        Returns:
+            itertools.product: [description]
+        """
         return product(
             aux.get_range_or_list(input_options["period"]),
             aux.get_range_or_list(input_options["amplitude"]),

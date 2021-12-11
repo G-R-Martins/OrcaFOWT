@@ -36,7 +36,7 @@ class Plotting:
 
     def plot_batch(self, post, batch) -> None:
         if isinstance(batch, bs.ThrustCurve):
-            self.plot_thurst_curve(post, batch.vars_to_eval)
+            self.plot_thurst_curve(post, batch.names)
 
     def new_plot(
         self,
@@ -75,10 +75,15 @@ class Plotting:
                 else:
                     plot[subplots[0] - 1].set_xlabel(labelx[0])
             else:
-                if len(labely) == 1:
-                    get_label = lambda i: labelx[0]
+                if len(labelx) == 1:
+
+                    def get_label(i=0):
+                        return labelx[0]
+
                 else:
-                    get_label = lambda i: labelx[i]
+
+                    def get_label(i):
+                        return labelx[i]
 
                 for lin in range(len(plot)):
                     # if has 1 column, the element will be a Axes object ...
@@ -100,10 +105,16 @@ class Plotting:
                     plot[0].set_ylabel(labely[0])
             else:
                 if len(labely) == 1:
-                    get_label = lambda i: labely[0]
-                else:
-                    get_label = lambda i: labely[i]
 
+                    def get_label(i=0):
+                        return labely[0]
+
+                else:
+
+                    def get_label(i):
+                        return labely[i]
+
+                label_id = 0
                 for lin in range(len(plot)):
                     # if has 1 column, the element will be a Axes object ...
                     if isinstance(plot[0], plt.Axes):
@@ -111,7 +122,10 @@ class Plotting:
                         continue
                     # ... otherwise, it will be an array
                     for col in range(len(plot[0])):
-                        plot[lin, col].set_ylabel(get_label(lin))
+                        plot[lin, col].set_ylabel(get_label(label_id))
+                        label_id += 1
+                        if label_id >= len(labely):
+                            return plot
 
         return plot
 
@@ -157,18 +171,23 @@ class Plotting:
                 # TODO: use in legend
                 # id = label[4 : label.find("_")]
                 plot_axs.plot(x, data)
-            return None
-        # ... or mulitples Axes (multiple rows and/or columns)
+            return
+        # ... or mulitples Axes
         cur_plot = 0
         for lin in range(len(plot_axs)):
+            # multiple rows or columns
             if isinstance(plot_axs[0], plt.Axes):
+                if cur_plot >= data.shape[1]:
+                    return
                 plot_axs[lin].plot(x, data.iloc[:, cur_plot])
                 cur_plot += 1
                 continue
+            # multiple rows and columns
             for col in range(len(plot_axs[0])):
                 plot_axs[lin, col].plot(x, data.iloc[:, cur_plot])
                 cur_plot += 1
-        return None
+                if cur_plot >= data.shape[1]:
+                    return
 
     def get_subplot_shareaxis_opt(self, use_same_fig, group, n_plots):
 
@@ -278,7 +297,7 @@ class Plotting:
                         "Thrust curve evaluation",
                         share_axs,
                         ylabels,
-                        ["Wind speed (s)"],
+                        ["Wind speed (m/s)"],
                     )
                 }
             )

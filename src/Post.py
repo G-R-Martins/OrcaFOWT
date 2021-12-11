@@ -87,6 +87,8 @@ class Post:
                         cur_line_definition["motion"], lines[num], num
                     )
 
+        # if options.get("turbines"):
+
         # if options.get('platforms'):
         #     for cur_def in options['platforms']:
         #         # Platform ID number
@@ -262,14 +264,25 @@ class Post:
 
     @staticmethod
     def append_thrust_results(turbine, vars_to_eval):
-        stats = turbine.LinkedStatistics(
-            vars_to_eval,
-            Post.period,
-        )
+        cur_row = []  # Results for current wind speed
+
+        # General results
+        if vars_to_eval["vars"]:
+            var_names = vars_to_eval["vars"]
+            stats = turbine.LinkedStatistics(var_names, Post.period)
+            cur_row.extend([stats.Query(var, var).Mean for var in var_names])
+        # Results for specific blade
+        if vars_to_eval["specific blade"]:
+            for data in vars_to_eval["specific blade"]:
+                stats = turbine.LinkedStatistics(
+                    data[0], Post.period, orca.oeTurbine(data[1], 0.0)
+                )
+                cur_row.extend([stats.Query(var, var).Mean for var in data[0]])
+
         # Mount row with (mean values of) requested data
-        Post.row_list.append([stats.Query(var, var).Mean for var in vars_to_eval])
+        Post.row_list.append(cur_row)
 
     @staticmethod
-    def set_thrust_curves(vars_to_eval, eval_range):
-        Post.batch_results = pd.DataFrame(Post.row_list, columns=vars_to_eval)
+    def set_thrust_curves(var_names, eval_range):
+        Post.batch_results = pd.DataFrame(Post.row_list, columns=var_names)
         Post.batch_results.insert(0, "Wind speed", eval_range)
