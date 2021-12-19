@@ -34,7 +34,7 @@ class IO:
     }
 
     @staticmethod
-    def read_input(file_name="none") -> bool:
+    def read_input(file_name, inp_dir="./") -> bool:
         """[summary]
 
         Args:
@@ -46,7 +46,7 @@ class IO:
 
         print(f'\nReading the input file "{file_name}.json". . .')
         IO.input_file_name = file_name.replace(" ", "")
-        return IO.read_json(file_name + ".json")
+        return IO.read_json(inp_dir + file_name + ".json")
 
     @staticmethod
     def read_json(file_name) -> bool:
@@ -114,12 +114,13 @@ class IO:
             orcaflexmodel.model.SaveData(IO.output_dir + filename)
         # Orcaflex simulation
         if IO.save_options["Orcaflex simulation"]:
-            filename = IO.input_file_name + ".sim"
-            print(f'\nSaving "{filename}" file . . .')
             if io_data.get("File IO") and io_data["File IO"].get("output"):
                 filename = io_data["File IO"]["output"].get(
-                    "Orcaflex sim", IO.input_file_name
+                    "Orcaflex simulation", IO.input_file_name + ".sim"
                 )
+            else:
+                filename = IO.input_file_name + ".sim"
+            print(f'\nSaving "{filename}" file . . .')
             orcaflexmodel.model.SaveSimulation(IO.output_dir + filename)
 
         # Post processing results

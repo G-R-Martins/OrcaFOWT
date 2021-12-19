@@ -12,23 +12,36 @@
     },
     "File IO": {
         "input": {
-            "Orcaflex data": "FOWTC-EvalThrust.yml"
+            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/Thrust/orcina/",
+            "Orcaflex data": "K03 15MW semi-sub FOWT - TOWER & TURBINE.yml"
         },
         "output": {
-            "Orcaflex sim": "FOWTC-EvalThrust-last.sim",
-            "Orcaflex data": "FOWTC-EvalThrust-last.yml"
+            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/Thrust/orcina/"
         }
     },
     "Batch": {
-        "save all": { "Orcaflex simulations": true, "Orcaflex data": true },
         "thrust curve": {
+            "direction": 0.0,
             "wind speed": { "from": 3, "to": 25, "step": 0.5 },
-            "curves": { "Ct": true, "Cp": true, "Lz force": true }
+            "profile": { 
+                "reference height": 150.0,
+                "height": { "from": 0.0, "to": 280.0, "step": 5.0 },
+                "expoent": 0.14
+            },
+            "monitors": {
+                "rotor": ["Ct", "Cp", "Lz force"],
+                "generator": ["torque", "power", "angular velocity"],
+                "specific blade": [
+                    { "id": 1, "vars": ["Blade pitch"] }
+                ],
+                "others": ["Angular velocity"]
+                
+            }
         }
     },
     "Analysis": {
         "statics enabled" : true,
-        "stage duration": [ 1000.0, 600.0 ],
+        "stage duration": [ 600.0, 300.0 ],
         "statics": {
             "max iterations": 400,
             "tolerance": 1.0e-6,
@@ -46,21 +59,19 @@
     },
     "PostProcessing": {
         "period": { "stage": 2 },
-
         "plots": {
             "thrust curve": {
                 "same fig": true,
-                "group": "same column"
+                "group": [4, 2]
             }
         },
-
         "export format": { 
             "batch": ["excel", "csv"]
         } 
     },
     "Save options": {
-        "Orcaflex data": true,
-        "Orcaflex simulation": true,
-        "results": true
+        "results": true,
+        "batch simulation": false,
+        "batch data": true
     }
 }
