@@ -2,6 +2,10 @@ database/
 *.sim
 *.yml
 *.dll
+*.txt
+*.gdf
+*.IN
+*.so
 
 .vscode/
 __pycache__/
