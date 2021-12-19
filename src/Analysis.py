@@ -25,34 +25,40 @@ class Analysis:
         )
 
     def set_analysis(
-        self, general_opt: orca.OrcaFlexObject, ana_opt: dict, lines, vessels
+        self, opt: orca.OrcaFlexObject, ana_opt: dict, lines, vessels
     ) -> None:
 
-        general_opt.StageDuration = ana_opt["stage duration"]
+        opt.StageDuration = ana_opt["stage duration"]
 
         # Statics
-        if self.static:
+        if self.static and ana_opt.get("statics"):
             statics = ana_opt["statics"]
-            general_opt.StaticsMaxIterations = statics["max iterations"]
-            general_opt.StaticsTolerance = statics["tolerance"]
-            general_opt.StaticsMinDamping = statics["damping"][0]
-            general_opt.StaticsMaxDamping = statics["damping"][1]
+            max_iter = statics.get("max iterations", 400)
+            opt.StaticsMaxIterations = max_iter
+            opt.StaticsTolerance = statics.get("tolerance", 1e-6)
+            if statics.get("damping"):
+                opt.StaticsMinDamping = statics["damping"][0]
+                opt.StaticsMaxDamping = statics["damping"][1]
+            else:
+                opt.StaticsMinDamping, opt.StaticsMaxDamping = 1.0, 10.0
 
         # Dynamics
         if self.dynamic:
-            dynamics = ana_opt["dynamics"]
-            if dynamics["method"] == "implicit":
-                if dynamics["variable time step"]:
+            dyn = ana_opt["dynamics"]
+            if dyn["method"] == "implicit":
+                if dyn["variable time step"]:
                     # TODO: variable time step
                     print("variable time step")
                 else:
-                    general_opt.ImplicitConstantTimeStep = dynamics["time step"]
-                    general_opt.ImplicitConstantMaxNumOfIterations = dynamics[
-                        "max iterations"
-                    ]
-                general_opt.ImplicitTolerance = dynamics["tolerance"]
-            general_opt.LogPrecision = dynamics.get("log precision", "Single").title()
-            general_opt.TargetLogSampleInterval = dynamics["sample"]
+                    opt.ImplicitConstantTimeStep = dyn["time step"]
+                    opt.ImplicitConstantMaxNumOfIterations = dyn.get(
+                        "max iterations", 100
+                    )
+                opt.ImplicitTolerance = dyn.get("tolerance", 25.0e-6)
+
+            log_precision = dyn.get("log precision", "Single").title()
+            opt.LogPrecision = log_precision
+            opt.TargetLogSampleInterval = dyn["sample"]
 
         # Modal
         if self.modal:
@@ -66,7 +72,10 @@ class Analysis:
                         calculateShapes=line["shapes"],
                         firstMode=line["modes"][0],
                         lastMode=line["modes"][1],
-                        includeCoupledObjects=line.get("include coupled", False),
+                        includeCoupledObjects=line.get(
+                            "include coupled",
+                            False,
+                        ),
                     )
                     self.modes_opt["lines"].append(
                         self.mode_desc(lines[line["id"]], spec)
@@ -77,19 +86,27 @@ class Analysis:
     # def run_simulation(self, orca_model: orca.Model, ) -> None:
     def run_simulation(self, Orcaflex, results) -> None:
         if self.static:
-            print("rRunning statics . . .")
+            print("Running statics . . .")
             Orcaflex.CalculateStatics()
 
         if self.modal:
             print("Running modal . . .")
-            _id = 1
+            id = 1
             for line in self.modes_opt["lines"]:
-                self.mode_details["lines"].append(orca.Modes(line.ref, line.spec))
+                self.mode_details["lines"].append(
+                    orca.Modes(
+                        line.ref,
+                        line.spec,
+                    )
+                )
                 modes = self.mode_details["lines"][-1]
                 results["modal"] = DataFrame(
-                    {"Mode": modes.modeNumber, "Period_Line" + str(_id): modes.period}
+                    {
+                        "Mode": modes.modeNumber,
+                        "Period_Line" + str(id): modes.period,
+                    }
                 )
-                _id += 1
+                id += 1
 
                 # for modeIndex in range(modes.modeCount):
                 #     details = modes.modeDetails(modeIndex)
