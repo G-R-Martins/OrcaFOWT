@@ -23,11 +23,11 @@ def main():
     if IO.actions.get("batch simulations"):
         set_and_run_batch(orca_model)
 
-    IO.save(orca_model, post)  # if requested from JSON file
+    IO.save(orca_model, post)
 
     print(f"\nElapsed time: {datetime.now() - t0} \n\nEnd execution!")
 
-    plt.show()  # show plots (if created)
+    plt.show()  # show plots (if created during postprocessing)
 
 
 if __name__ == "__main__":

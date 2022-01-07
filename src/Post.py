@@ -36,19 +36,12 @@ class Post:
             self.formats = input_definitions["export format"]
         Post.period = Post.set_result_period(input_definitions.get("period"))
 
-    def process_simulation_results(
-        self,
-        lines=None,
-        platforms=None,
-        towers=None,
-        turbines=None,
-        nacelles=None,
-    ) -> None:
+    def process_simulation_results(self, orca_obj_ref) -> None:
 
         if self.options.get("lines"):
-            self.process_lines(lines)
+            self.process_lines(orca_obj_ref["lines"])
         if self.options.get("platforms"):
-            self.process_platforms(platforms)
+            self.process_platforms(orca_obj_ref["vessels"])
 
     def process_lines(self, lines) -> None:
         self.check_dynamic_time(aux.get_first_dict_element(lines))

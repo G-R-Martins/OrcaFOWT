@@ -11,3 +11,4 @@ database/
 __pycache__/
 venv/
 
+inputs/FOWTC.json

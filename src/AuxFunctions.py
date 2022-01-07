@@ -2,21 +2,22 @@ import numpy as np
 from itertools import product
 
 
-def get_seed(my_seed=0):
+def get_numpy_random_gen(seed_generator=None) -> np.random.Generator:
+    return np.random.default_rng(seed_generator)
+
+
+def get_seed(seed_generator=None):
     # Maximum seed (absolute) value
     max_abs_seed = 2147483647  # taken from Orcaflex
-    if not my_seed:
-        rng = np.random.default_rng()
-        my_seed = rng.integers(low=-max_abs_seed, high=max_abs_seed)
+    rng = get_numpy_random_gen(seed_generator)
+    my_seed = rng.integers(low=-max_abs_seed, high=max_abs_seed)
 
-    # If a value different than ZERO is set,
-    # just return it as the seed value
     return my_seed
 
 
-def get_random_floats(n_numbers=1, first=0, last=360):
+def get_random_floats(n_numbers=1, first=0, last=360, my_seed_generator=None):
     # update Numpy seed
-    rng = np.random.default_rng(get_seed())
+    rng = np.random.default_rng(get_seed(my_seed_generator))
     rand_floats = rng.random(n_numbers)  # between [0.0, 1)
     rand_ints = rng.integers(low=first, high=last, size=n_numbers)
 

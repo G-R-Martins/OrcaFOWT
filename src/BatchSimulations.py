@@ -15,6 +15,7 @@ def set_and_run_batch(orca_model: OrcaflexModel, post) -> None:
     batch_type = aux.to_title_and_remove_ws(batch_type)
     # ... initialize object and do the analyses
     batch = eval("BatchSimulations." + batch_type + "(post)")
+    print()  # blank line
     batch.execute_batch(orca_model, post)
 
 
@@ -29,12 +30,6 @@ class BatchSimulations:
         """
         # Post options -> plot definitions and period
         post.set_options(IO.input_data["PostProcessing"])
-
-    # ================ #
-    #                  #
-    #   Thrust curve   #
-    #                  #
-    # ================ #
 
 
 class ThrustCurve(BatchSimulations):
@@ -70,8 +65,6 @@ class ThrustCurve(BatchSimulations):
             orca_model (OrcaflexModel): [description]
             post ([type]): [description]
         """
-
-        print()  # blank line
 
         self.eval_thrust_curve(orca_model, post)
 
@@ -131,11 +124,14 @@ class ThrustCurve(BatchSimulations):
             post ([type]): [description]
         """
 
+        expoent = str(
+            IO.input_data["Batch"]["thrust curve"]["profile"]["expoent"],
+        )
         # Set wind profile (same for all velocities)
         orca_model.create_wind_profile(
             self.profile["height"],
             self.profile["vertical factor"],
-            "constant wind profile",
+            f"wind profile - exp{expoent}",
         )
 
         # Iterate speeds
@@ -215,7 +211,6 @@ class VesselHarmonicMotion(BatchSimulations):
             orca_model (OrcaflexModel): [description]
             post (Post): [description]
         """
-        print()  # blank line
 
         self.impose_motion(orca_model, post)
 
@@ -251,10 +246,7 @@ class VesselHarmonicMotion(BatchSimulations):
                 orca_model.model.RunSimulation()
 
                 # Get results
-                post.process_simulation_results(
-                    orca_model.orca_refs.get("lines", None),
-                    orca_model.orca_refs.get("vessels", None),
-                )
+                post.process_simulation_results(orca_model.orca_refs)
 
                 # Save
                 file_name = dof + f"_period{c[0]}_ampl{c[1]}_phase{c[2]}"
@@ -302,3 +294,62 @@ class VesselHarmonicMotion(BatchSimulations):
             aux.get_range_or_list(input_options["amplitude"]),
             aux.get_range_or_list(input_options["phase"]),
         )
+
+
+class WaveSeeds(BatchSimulations):
+    """[summary]"""
+
+    def __init__(self, post) -> None:
+        """[summary]
+
+        Args:
+            post (Post): [description]
+        """
+
+        super().__init__(post)
+
+        # Input options
+        self.n_cases = IO.input_data["Batch"]["wave seed"]["number of cases"]
+        self.rng = aux.get_numpy_random_gen(
+            IO.input_data["Batch"]["wave seed"].get("seed generator", None)
+        )
+
+    def execute_batch(self, orca_model: OrcaflexModel, post) -> None:
+        """[summary]
+
+        Args:
+            orca_model (OrcaflexModel): [description]
+            post (Post): [description]
+        """
+
+        self.update_wave_seeds_and_run(orca_model, post)
+
+        if IO.actions["plot results"]:
+            post.plot.plot_batch(post, self)
+
+    def update_wave_seeds_and_run(self, orca_model: OrcaflexModel, post):
+        """[summary]
+
+        Args:
+            orca_model (OrcaflexModel): [description]
+            post (Post): [description]
+        """
+
+        orca_env = orca_model.model.environment
+
+        for case in range(1, self.n_cases, 1):
+            orca_env.WaveSeed = aux.get_seed(self.rng)
+
+            # Run simulation
+            print(
+                f"\nRunning simulation {case}/{self.n_cases}:",
+                f"\twave seed={orca_env.WaveSeed}",
+            )
+            orca_model.model.RunSimulation()
+
+            # Get results
+            post.process_simulation_results(orca_model.orca_refs)
+
+            # Save
+            file_name = f"wave_seed_{case}_of_{self.n_cases}"
+            IO.save_step_from_batch(orca_model.model, file_name, post)
