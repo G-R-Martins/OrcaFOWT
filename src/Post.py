@@ -50,9 +50,20 @@ class Post:
             # Line ID number
             num = cur_line_definition["id"]
 
+            # Check if default definition must be used, otherwise uses the specific line definition
+            static_def, dynamic_def = False, False
+            if cur_line_definition.get("defined"):
+                if "statics" in cur_line_definition["defined"]:
+                    static_def = True
+                if "dynamics" in cur_line_definition["defined"]:
+                    dynamic_def = True
+
             # Check if static results are requested
-            if "statics" in cur_line_definition:
-                statics = cur_line_definition["statics"]
+            if "statics" in cur_line_definition or static_def:
+                if static_def:
+                    statics = self.options["output definitions"]["lines"]["statics"]
+                else:
+                    statics = cur_line_definition["statics"]
 
                 if statics.get("tension"):
                     self.process_line_tension(
@@ -79,8 +90,11 @@ class Post:
                         False,
                     )
 
-            if "dynamics" in cur_line_definition:
-                dynamics = cur_line_definition["dynamics"]
+            if "dynamics" in cur_line_definition or dynamic_def:
+                if dynamic_def:
+                    dynamics = self.options["output definitions"]["lines"]["dynamics"]
+                else:
+                    dynamics = cur_line_definition["dynamics"]
 
                 if dynamics.get("tension"):
                     self.process_line_tension(

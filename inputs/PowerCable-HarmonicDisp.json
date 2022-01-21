@@ -15,9 +15,6 @@
         "input": {
             "dir": "D:/Guilherme_Martins/Orcaflex/Teste-Cabo/HarmonicDisp/",
             "Orcaflex data": "Cabo-vessel.yml"
-        },
-        "output": {
-            "dir": "G:/Drives compartilhados/Projeto DWFOWT - Cabos/Orcaflex/"
         }
     },
 
@@ -60,10 +57,11 @@
         "export format": { 
             "batch": ["excel", "csv"]
         },
+
         "period": { "stage": 3 },
-        "lines": [
-            { 
-                "id": 1,
+
+        "output definitions": {
+            "lines": {
                 "statics": {
                     "tension": "all nodes",
                     "position": {
@@ -83,6 +81,12 @@
                         "Dynamic Ry": "all nodes"
                     }
                 }
+            }
+        },
+        "lines": [
+            { 
+                "id": 1, 
+                "defined": ["statics", "dynamics"] 
             }
         ]
     },
