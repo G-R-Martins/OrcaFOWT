@@ -17,23 +17,21 @@
             "Orcaflex data": "Cabo-vessel.yml"
         },
         "output": {
-            "dir": "D:/Guilherme_Martins/Orcaflex/Teste-Cabo/HarmonicDisp/",
-            "Orcaflex sim": "Cabo-vessel.sim",
-            "Orcaflex data": "Cabo-vessel.yml"
+            "dir": "G:/Drives compartilhados/Projeto DWFOWT - Cabos/Orcaflex/"
         }
     },
 
     "Batch": {
         "vessel harmonic motion": {
             "combine dofs": false,
-            "motion": {
+            "position": {
                 "surge": { 
                     "amplitude": 1.0, "phase": 180.0,
-                    "period": { "from": 10.5, "to": 40.0, "step": 0.5 }
+                    "period": { "from": 1.0, "to": 40.0, "step": 0.5 }
                 },
                 "heave": { 
                     "amplitude": 1.0, "phase": 180.0,
-                    "period": { "from": 10.5, "to": 40.0, "step": 0.5 } 
+                    "period": { "from": 1.0, "to": 40.0, "step": 0.5 } 
                 }
             }
         }
@@ -41,7 +39,7 @@
     
     "Analysis": {
         "statics enabled" : true,
-        "stage duration": [ 100.0, 100.0, 300.0 ],
+        "stage duration": [ 50.0, 50.0, 300.0 ],
         "statics": {
             "max iterations": 400,
             "tolerance": 1.0e-6,
@@ -59,7 +57,6 @@
     },
 
     "PostProcessing": {
-        "plots": [ "line tensions", "line position" ],
         "export format": { 
             "batch": ["excel", "csv"]
         },
@@ -67,9 +64,24 @@
         "lines": [
             { 
                 "id": 1,
-                "tension": "all nodes",
-                "motion": {
-                    "all nodes": ["X", "Z", "Dynamic Ry"]
+                "statics": {
+                    "tension": "all nodes",
+                    "position": {
+                        "all nodes": ["X", "Z", "Declination"]
+                    },
+                    "other results": {
+                        "Total mean axial strain": "all nodes"
+                    }
+                },
+                "dynamics": {
+                    "tension": "all nodes",
+                    "position": {
+                        "all nodes": ["X", "Z", "Declination"]
+                    },
+                    "other results": {
+                        "Total mean axial strain": "all nodes",
+                        "Dynamic Ry": "all nodes"
+                    }
                 }
             }
         ]
@@ -79,7 +91,7 @@
         "Orcaflex data": false,
         "Orcaflex simulation": false,
         "results": true,
-        "batch simulation": false,
+        "batch simulation": true,
         "batch data": true
     }
 }

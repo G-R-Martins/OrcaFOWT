@@ -14,7 +14,7 @@ def set_and_run_batch(orca_model: OrcaflexModel, post) -> None:
     batch_type = aux.get_ith_key(IO.input_data["Batch"], 0)
     batch_type = aux.to_title_and_remove_ws(batch_type)
     # ... initialize object and do the analyses
-    batch = eval("BatchSimulations." + batch_type + "(post)")
+    batch = eval(batch_type + "(post)")
     print()  # blank line
     batch.execute_batch(orca_model, post)
 
@@ -178,12 +178,6 @@ class ThrustCurve(BatchSimulations):
             "vertical factor": [(h / h_ref) ** coef for h in height],
         }
 
-    # ======================== #
-    #                          #
-    #  Vessel harmonic motion  #
-    #                          #
-    # ======================== #
-
 
 class VesselHarmonicMotion(BatchSimulations):
     """[summary]"""
@@ -201,8 +195,8 @@ class VesselHarmonicMotion(BatchSimulations):
         opt = IO.input_data["Batch"]["vessel harmonic motion"]
 
         self.combine_dofs = opt.get("combine dofs", False)
-        self.dof_motion = opt["motion"]
-        self.dofs_to_oscilate = list(opt["motion"].keys())
+        self.dof_position = opt["position"]
+        self.dofs_to_oscilate = list(opt["position"].keys())
 
     def execute_batch(self, orca_model: OrcaflexModel, post) -> None:
         """[summary]
@@ -273,7 +267,7 @@ class VesselHarmonicMotion(BatchSimulations):
             }
         )
         for dof in combs:
-            data = self.dof_motion.get(dof)
+            data = self.dof_position.get(dof)
             # if is defined, update the combination in the dict 'combs'
             if data:
                 combs[dof] = self.get_dof_combinations(data)
@@ -296,7 +290,7 @@ class VesselHarmonicMotion(BatchSimulations):
         )
 
 
-class WaveSeeds(BatchSimulations):
+class WaveSeed(BatchSimulations):
     """[summary]"""
 
     def __init__(self, post) -> None:

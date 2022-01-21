@@ -46,54 +46,71 @@ class Post:
     def process_lines(self, lines) -> None:
         self.check_dynamic_time(aux.get_first_dict_element(lines))
 
-        # Tensions
         for cur_line_definition in self.options["lines"]:
             # Line ID number
             num = cur_line_definition["id"]
 
-            # Check if static tension is requested
-            if "static" in cur_line_definition:
-                rng = lines[num].RangeGraph(
-                    "Effective tension", period=orca.pnStaticState
-                )
-                prefix = "Line" + str(num) + "_"
-                self.static[prefix + "ArcLen"] = rng.X
-                self.static[prefix + "EffectiveTension"] = rng.Mean
-            """
-                pd.concat(
+            # Check if static results are requested
+            if "statics" in cur_line_definition:
+                statics = cur_line_definition["statics"]
 
-                    [
+                if statics.get("tension"):
+                    self.process_line_tension(
                         self.results["statics"],
-                        pd.DataFrame(
-                            [[rng.X, rng.Mean]],
-                            columns=[
-                                prefix + "ArcLen",
-                                prefix + "EffectiveTension",
-                            ],
-                        ),
-                    ],
-                    axis=1,
-                    # ignore_index=True,
-                )
-                """
-            if cur_line_definition.get("tension"):
-                self.process_line_tension(
-                    cur_line_definition["tension"], lines[num], num
-                )
-        # Motion
-        for cur_line_definition in self.options["lines"]:
-            # Line ID number
-            num = cur_line_definition["id"]
+                        statics["tension"],
+                        lines[num],
+                        num,
+                        False,
+                    )
+                if statics.get("position"):
+                    self.process_line_position(
+                        self.results["statics"],
+                        statics["position"],
+                        lines[num],
+                        num,
+                        False,
+                    )
+                if statics.get("other results"):
+                    self.process_line_other_results(
+                        self.results["statics"],
+                        statics["other results"],
+                        lines[num],
+                        num,
+                        False,
+                    )
 
-            if cur_line_definition.get("motion"):
-                self.process_line_motion(
-                    cur_line_definition["motion"],
-                    lines[num],
-                    num,
-                )
+            if "dynamics" in cur_line_definition:
+                dynamics = cur_line_definition["dynamics"]
 
-    def process_line_tension(self, points, line, line_id) -> None:
-        period = Post.period
+                if dynamics.get("tension"):
+                    self.process_line_tension(
+                        self.results["dynamics"],
+                        dynamics["tension"],
+                        lines[num],
+                        num,
+                    )
+                if dynamics.get("position"):
+                    self.process_line_position(
+                        self.results["dynamics"],
+                        dynamics["position"],
+                        lines[num],
+                        num,
+                    )
+                if dynamics.get("other results"):
+                    self.process_line_other_results(
+                        self.results["dynamics"],
+                        dynamics["other results"],
+                        lines[num],
+                        num,
+                    )
+
+    def process_line_tension(
+        self, results, points, line, line_id, is_dynamic=True
+    ) -> None:
+        if is_dynamic:
+            period = Post.period
+        else:
+            period = orca.pnStaticState
 
         # points: dict | string
         if isinstance(points, str) and points == "all nodes":
@@ -109,7 +126,7 @@ class Post:
                 col_name = "Line" + str(line_id) + "_Node" + node_id
 
                 # self.results[col_name] = line.TimeHistory(
-                self.results["dynamics"][col_name] = line.TimeHistory(
+                results[col_name] = line.TimeHistory(
                     "Effective tension", period, orca.oeNodeNum(node)
                 )
             return None
@@ -117,15 +134,15 @@ class Post:
         if "fairleads" in points:
             predicate = "Line" + str(line_id)
             if "A" in points["fairleads"]:
-                self.results["dynamics"][
-                    predicate + "_NodeA_Tension"
-                ] = line.TimeHistory("Effective tension", period, orca.oeEndA)
+                results[predicate + "_NodeA_Tension"] = line.TimeHistory(
+                    "Effective tension", period, orca.oeEndA
+                )
             # If is not anchored, the line has 2 fairleads
             isAnchored = line.EndBConnection == "Anchored"
             if "B" in points["fairleads"] and not isAnchored:
-                self.results["dynamics"][
-                    predicate + "_NodeB_Tension"
-                ] = line.TimeHistory("Effective tension", period, orca.oeEndB)
+                results[predicate + "_NodeB_Tension"] = line.TimeHistory(
+                    "Effective tension", period, orca.oeEndB
+                )
 
         if "end segments" in points:
             if points["end segments"] == "all":
@@ -135,7 +152,7 @@ class Post:
 
             for seg in range(first, last, 1):
                 col_name = f"Line{line_id}_EndSeg{seg + 1}_Tension"
-                self.results["dynamics"][col_name] = line.TimeHistory(
+                results[col_name] = line.TimeHistory(
                     "Effective tension",
                     period,
                     orca.oeArcLength(line.CumulativeLength[seg]),
@@ -144,19 +161,42 @@ class Post:
         if "arc length" in points:
             for arc_len in points["arc length"]:
                 col_name = f"Line{line_id}_ArcLen{arc_len}_Tension"
-                self.results["dynamics"][col_name] = line.TimeHistory(
+                results[col_name] = line.TimeHistory(
                     "Effective tension",
                     period,
                     orca.oeArcLength(line.CumulativeLength[seg]),
                 )
 
-    def process_line_motion(self, points: dict, line, line_id) -> None:
+    def process_line_position(
+        self, results, points: dict, line, line_id, is_dynamic=True
+    ) -> None:
+        if is_dynamic:
+            period = Post.period
+        else:
+            period = orca.pnStaticState
+
         if "all nodes" in points:
             tot_nodes = len(line.NodeArclengths)
 
             # Define DoFs to monitor
             if points["all nodes"] == "all dofs":
-                dofs = "X", "Y", "Z", "Dynamic Rx", "Dynamic Ry", "Dynamic Rz"
+                dofs = (
+                    "X",
+                    "Y",
+                    "Z",
+                    "Azimuth",
+                    "Declination",
+                    "Gamma",
+                )
+            elif points["all nodes"] == "all dofs - dynamic":
+                dofs = (
+                    "Dynamic X",
+                    "Dynamic Y",
+                    "Dynamic Z",
+                    "Dynamic Rx",
+                    "Dynamic Ry",
+                    "Dynamic Rz",
+                )
             else:
                 dofs = tuple(points["all nodes"])
 
@@ -173,11 +213,9 @@ class Post:
 
                 # Iterate DoFs and push to DataFrame
                 for dof in dofs:
-                    self.results["dynamics"][
-                        col_name + dof.replace(" ", "")
-                    ] = line.TimeHistory(
+                    results[col_name + dof.replace(" ", "")] = line.TimeHistory(
                         dof,
-                        Post.period,
+                        period,
                         orca.oeNodeNum(node),
                     )
 
@@ -210,9 +248,9 @@ class Post:
 
                 for dof in dofs:
                     # Remove spaces in Rotations
-                    self.results["dynamics"][
-                        predicate + "_" + dof.replace(" ", "")
-                    ] = line.TimeHistory(dof, Post.period, end_node)
+                    results[predicate + "_" + dof.replace(" ", "")] = line.TimeHistory(
+                        dof, period, end_node
+                    )
 
         if "end segments" in points:
             # Define segments to monitor
@@ -233,11 +271,9 @@ class Post:
                 predicate = "Line" + str(line_id) + "_EndSeg" + str(seg + 1)
 
                 for dof in dofs:
-                    self.results["dynamics"][
-                        predicate + "_" + dof.replace(" ", "")
-                    ] = line.TimeHistory(
+                    results[predicate + "_" + dof.replace(" ", "")] = line.TimeHistory(
                         dof,
-                        Post.period,
+                        period,
                         orca.oeArcLength(line.CumulativeLength[seg]),
                     )
 
@@ -262,17 +298,84 @@ class Post:
                 # Push results to results DataFrame
                 for dof in dofs:
                     # dof_ = dof.replace(" ", "")  # remove space (rotation)
-                    self.results["dynamics"][
-                        predicate + "_" + dof.replace(" ", "")
-                    ] = line.TimeHistory(
-                        dof, Post.period, orca.oeArcLength(float(arc_len))
+                    results[predicate + "_" + dof.replace(" ", "")] = line.TimeHistory(
+                        dof, period, orca.oeArcLength(float(arc_len))
                     )
-            ####################################
+
+    def process_line_other_results(
+        self, results, results_opt: dict, line, line_id, is_dynamic=True
+    ) -> None:
+        if is_dynamic:
+            period = Post.period
+        else:
+            period = orca.pnStaticState
+
+        for res_name, definition in results_opt.items():
+
+            # definition: dict | string
+            if isinstance(definition, str) and definition == "all nodes":
+                tot_nodes = len(line.NodeArclengths)
+
+                for node in range(1, tot_nodes + 1):
+                    ret_after_all_nodes = True
+                    # Set name of DataFrame column
+                    if node == 1:
+                        node_id = "A_" + aux.to_title_and_remove_ws(res_name)
+                    elif node == tot_nodes:
+                        node_id = "B_" + aux.to_title_and_remove_ws(res_name)
+                    else:
+                        node_id = str(node) + "_" + aux.to_title_and_remove_ws(res_name)
+                    col_name = "Line" + str(line_id) + "_Node" + node_id
+
+                    # self.results[col_name] = line.TimeHistory(
+                    results[col_name] = line.TimeHistory(
+                        res_name, period, orca.oeNodeNum(node)
+                    )
+
+            if "fairleads" in definition:
+                predicate = "Line" + str(line_id)
+                if "A" in definition["fairleads"]:
+                    full_name = (
+                        predicate + "_NodeA_" + aux.to_title_and_remove_ws(res_name)
+                    )
+                    results[full_name] = line.TimeHistory(res_name, period, orca.oeEndA)
+                # If is not anchored, the line has 2 fairleads
+                isAnchored = line.EndBConnection == "Anchored"
+                if "B" in definition["fairleads"] and not isAnchored:
+                    full_name = (
+                        predicate + "_NodeB_" + aux.to_title_and_remove_ws(res_name)
+                    )
+                    results[full_name] = line.TimeHistory(res_name, period, orca.oeEndB)
+
+            if "end segments" in definition:
+                if definition["end segments"] == "all":
+                    first, last = 0, line.NumberOfSections - 1
+                else:
+                    first, last = definition["end segments"]
+
+                for seg in range(first, last, 1):
+                    col_name = f"Line{line_id}_EndSeg{seg + 1}_Tension"
+                    results[col_name] = line.TimeHistory(
+                        res_name,
+                        period,
+                        orca.oeArcLength(line.CumulativeLength[seg]),
+                    )
+
+            if "arc length" in definition:
+                for arc_len in definition["arc length"]:
+                    col_name = f"Line{line_id}_ArcLen{arc_len}_Tension"
+                    results[col_name] = line.TimeHistory(
+                        res_name,
+                        period,
+                        orca.oeArcLength(line.CumulativeLength[seg]),
+                    )
+
+    ####################################
 
     def process_platforms(self, platforms) -> None:
         self.check_dynamic_time(aux.get_first_dict_element(platforms))
 
-        # Motion
+        # Position
         for cur_platf in self.options["platforms"]:
             # Platform ID number
             num = cur_platf["id"]

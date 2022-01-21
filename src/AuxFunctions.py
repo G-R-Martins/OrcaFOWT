@@ -55,8 +55,12 @@ def get_first_dict_element(d):
     return next(iter(d.items()))[1]
 
 
-def to_title_and_remove_ws(string) -> str:
+def to_title_and_remove_ws(string: str) -> str:
     return string.title().replace(" ", "")
+
+
+def capitalize_and_remove_ws(string: str) -> str:
+    return string.capitalize().replace(" ", "")
 
 
 def prepend_to_colnames(colnames, to_add) -> list[str]:
