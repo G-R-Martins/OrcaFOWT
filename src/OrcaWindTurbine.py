@@ -14,7 +14,7 @@ post = Post()
 def main():
     t0 = datetime.now()  # Start counting time
 
-    IO.read_input("PowerCable-HarmonicDisp", "inputs/")
+    IO.read_input("PowerCable-Homogeneous-Modal", "inputs/")
 
     # Reference model
     orca_model = OrcaflexModel(post)

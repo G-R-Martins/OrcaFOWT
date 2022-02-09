@@ -1,6 +1,7 @@
 import OrcFxAPI as orca
 from Plotting import Plotting
 import pandas as pd
+import numpy as np
 from IO import IO
 import AuxFunctions as aux
 
@@ -15,7 +16,7 @@ class Post:
     def __init__(self) -> None:
         self.results = {
             "statics": pd.DataFrame(),
-            "modal": pd.DataFrame(),
+            "modal": dict[str, pd.DataFrame](),
             "dynamics": pd.DataFrame(),
         }
 
@@ -315,6 +316,89 @@ class Post:
                     results[predicate + "_" + dof.replace(" ", "")] = line.TimeHistory(
                         dof, period, orca.oeArcLength(float(arc_len))
                     )
+
+    def process_line_modal(self, line_id, mode_details) -> None:
+        line_post_opt = IO.input_data["PostProcessing"]["lines"][line_id - 1]
+
+        # Check if default definition must be used,
+        # otherwise uses the specific line definition
+        opt_defined = False
+        if line_post_opt.get("defined") and "modal" in line_post_opt["defined"]:
+            opt_defined = True
+
+        # Check if modal results are requested
+        if "modal" in line_post_opt or opt_defined is True:
+            if opt_defined:
+                modal_def = IO.input_data["PostProcessing"]["output definitions"][
+                    "lines"
+                ]["modal"]
+            else:
+                modal_def = line_post_opt["modal"]
+
+        tot_dofs = mode_details.dofCount
+        tot_modes = mode_details.modeCount
+
+        # Number of results -> total number of dataframe columns
+        n_cols = 1
+        outputs = ["Mode"]
+        for opt, val in modal_def.items():
+            if not val:
+                continue
+            # If output option was set to 'true' the result will be requested...
+            outputs.append(opt)
+            # ...thus, check if all DoFs will be added to results...
+            if "shape" in opt:
+                n_cols += tot_dofs
+            # ... or just one column (for period, mass, and stiffness)
+            else:
+                n_cols += 1
+
+        # Initialize numpy 2D array to save modal results
+        # each mode results in a separated line
+        data = np.zeros((tot_modes, n_cols))
+
+        # Set column names
+        col_names = [name.title() for name in outputs if "shape" not in name]
+        if "local shape" in outputs:
+            for node in range(2, mode_details.nodeNumber[-1] + 1):
+                col_names += [
+                    "Node" + str(node) + dof
+                    for dof in ["_LocalX", "_LocalY", "_LocalZ"]
+                ]
+        if "global shape" in outputs:
+            for node in range(2, mode_details.nodeNumber[-1] + 1):
+                col_names += [
+                    "Node" + str(node) + dof
+                    for dof in ["_GlobalX", "_GlobalY", "_GlobalZ"]
+                ]
+
+        # Set result data
+        for lin in range(tot_modes):
+            mode = mode_details.modeDetails(lin)
+            data[lin, 0] = mode.modeNumber
+            col = 1
+            if "period" in outputs:
+                data[lin, col] = mode.period
+                col += 1
+            if "mass" in outputs:
+                data[lin, col] = mode.mass
+                col += 1
+            if "stiffness" in outputs:
+                data[lin, col] = mode.stiffness
+                col += 1
+
+            if "local shape" in outputs:
+                data[lin, col : col + tot_dofs] = mode.shapeWrtLocal
+                col += tot_dofs
+
+            if "global shape" in outputs:
+                data[lin, col : col + tot_dofs] = mode.shapeWrtGlobal
+                col += tot_dofs
+
+        self.results["modal"]["Line" + str(line_id)] = pd.DataFrame(
+            data,
+            columns=col_names,
+        )
 
     def process_line_other_results(
         self, results, results_opt: dict, line, line_id, is_dynamic=True

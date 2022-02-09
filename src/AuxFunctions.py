@@ -81,7 +81,11 @@ def pre_and_append_to_colnames(colnames, prefix, postfix) -> list[str]:
 def export_results(data, filename, formats, predicate="") -> None:
 
     if "excel" in formats:
-        data.to_excel(filename + predicate + ".xlsx")
+        full_excel_name = filename + predicate + ".xlsx"
+        print(f'\nSaving "{full_excel_name}" file . . .')
+        data.to_excel(full_excel_name)
 
     if "csv" in formats:
-        data.to_csv(filename + predicate + ".csv", sep=";", header=True)
+        full_csv_name = filename + predicate + ".csv"
+        print(f'\nSaving "{full_csv_name}" file . . .')
+        data.to_csv(full_csv_name, sep=";", header=True)
