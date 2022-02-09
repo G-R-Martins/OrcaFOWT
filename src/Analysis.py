@@ -1,5 +1,4 @@
 import OrcFxAPI as orca
-from pandas import DataFrame
 from collections import namedtuple
 from IO import IO
 
@@ -13,9 +12,18 @@ class Analysis:
     ) -> None:
         self.static, self.dynamic, self.modal = ana_type
 
-        self.mode_desc = namedtuple("ModeDescription", ["ref", "spec"])
-        self.modes_opt = {"lines": [], "system": []}
-        self.mode_details: dict[str, list] = {"lines": [], "system": []}
+        self.mode_description = namedtuple("ModeDescription", ["ref", "spec"])
+        self.modal_opt = {
+            "lines": dict[str, dict](),
+            # {
+            #     "opt": ,
+            #     "details": ,
+            # },
+            "system": {
+                "opt": None,
+                "details": None,
+            },
+        }
 
         self.set_analysis(
             general_opt,
@@ -77,52 +85,35 @@ class Analysis:
                             False,
                         ),
                     )
-                    self.modes_opt["lines"].append(
-                        self.mode_desc(lines[line["id"]], spec)
-                    )
+                    self.modal_opt["lines"][line["id"]] = {
+                        "opt": self.mode_description(
+                            lines[line["id"]],
+                            spec,
+                        ),
+                        "details": None,
+                    }
             # TODO
             # if modal.get('whole system'):
 
-    # def run_simulation(self, orca_model: orca.Model, ) -> None:
-    def run_simulation(self, Orcaflex, results) -> None:
+    def run_simulation(self, Orcaflex, post) -> None:
         if self.static:
             print("Running statics . . .")
             Orcaflex.CalculateStatics()
+            print("Static analysis finished!\n")
 
         if self.modal:
             print("Running modal . . .")
-            id = 1
-            for line in self.modes_opt["lines"]:
-                self.mode_details["lines"].append(
-                    orca.Modes(
-                        line.ref,
-                        line.spec,
-                    )
+            for line_id, val in self.modal_opt["lines"].items():
+                val["details"] = orca.Modes(
+                    val["opt"].ref,
+                    val["opt"].spec,
                 )
-                modes = self.mode_details["lines"][-1]
-                results["modal"] = DataFrame(
-                    {
-                        "Mode": modes.modeNumber,
-                        "Period_Line" + str(id): modes.period,
-                    }
-                )
-                id += 1
-
-                # for modeIndex in range(modes.modeCount):
-                #     details = modes.modeDetails(modeIndex)
-                #     Orcaflex.post.results['modal'].append(
-                #         [details.modeNumber, details.period],
-                #         # columns=['Mode', 'Period'],
-                #         # ignore_index=True
-                #     )
-
-                #     print('Mode ', details.modeNumber,
-                #           ' \t Period ', details.period)
-        # for line in self.modes_opt['whole system']:
-        #     orca_model.Modes(line.ref, line.spec)
+                post.process_line_modal(line_id, val["details"])
+            print("Modal analysis finished!\n")
 
         if self.dynamic:
             print("Running dynamics . . .")
             # print(getcwd())
             # chdir('./database')
             Orcaflex.RunSimulation()
+            print("Dynamic analysis finished!\n")

@@ -5,11 +5,13 @@ import AuxFunctions as aux
 class IO:
     """[summary]"""
 
-    output_dir: str = "./"
-    input_dir: str = "./"
+    output_dir: str = "./"  # Directory to save OrcaFlex files (model and sim)
+    results_dir: str = "./"  # Directory to save postprocessed results
+    input_dir: str = "./"  # Directory to read input file (model or simulation)
 
     input_data = dict()
     input_file_name: str = ""
+    name_no_extension: str = ""
 
     # Default actions
     actions: dict[str, bool] = {
@@ -44,9 +46,10 @@ class IO:
             bool: [description]
         """
 
-        print(f'\nReading the input file "{file_name}.json". . .')
-        IO.input_file_name = file_name.replace(" ", "")
-        return IO.read_json(inp_dir + file_name + ".json")
+        IO.name_no_extension = file_name.replace(" ", "")
+        IO.input_file_name = inp_dir + IO.name_no_extension + ".json"
+        print(f'\nReading the input file "{IO.input_file_name}". . .')
+        return IO.read_json(IO.input_file_name)
 
     @staticmethod
     def read_json(file_name) -> bool:
@@ -105,8 +108,8 @@ class IO:
         io_data = IO.input_data
         # Orcaflex input data
         if IO.save_options["Orcaflex data"]:
-            filename = IO.input_file_name + ".yml"
-            print(f'\nSaving "{filename}" file . . .')
+            filename = IO.name_no_extension + ".yml"
+            print(f'\nSaving "{IO.output_dir + filename}" file . . .')
             if io_data.get("File IO") and io_data["File IO"].get("input"):
                 filename = io_data["File IO"]["output"].get(
                     "Orcaflex data", IO.input_file_name
@@ -116,18 +119,18 @@ class IO:
         if IO.save_options["Orcaflex simulation"]:
             if io_data.get("File IO") and io_data["File IO"].get("output"):
                 filename = io_data["File IO"]["output"].get(
-                    "Orcaflex simulation", IO.input_file_name + ".sim"
+                    "Orcaflex simulation", IO.name_no_extension + ".sim"
                 )
             else:
                 filename = IO.input_file_name + ".sim"
-            print(f'\nSaving "{filename}" file . . .')
+            print(f'\nSaving "{IO.output_dir + filename}" file . . .')
             orcaflexmodel.model.SaveSimulation(IO.output_dir + filename)
 
         # Post processing results
         if IO.save_options["results"]:
             print("\nExporting results . . .")
             # File name without extension
-            filename = IO.output_dir + IO.input_file_name
+            filename = IO.results_dir + IO.name_no_extension
 
             # Format to save
             formats = post.formats
@@ -136,10 +139,17 @@ class IO:
                 return
 
             res = post.results
-            for sim in ["statics", "dynamics", "modal"]:
+            for sim in ["statics", "dynamics"]:
                 if not formats.get(sim) or res[sim].empty:
                     continue
                 aux.export_results(res[sim], filename, formats[sim], "_" + sim)
+
+            # Modal results -> for each line and whole system
+            if formats.get("modal") and res["modal"]:
+                for name, data in res["modal"].items():
+                    aux.export_results(
+                        data, filename + "_" + name, formats["modal"], "_modal"
+                    )
 
             if formats.get("batch") and not post.batch_results.empty:
                 aux.export_results(
@@ -156,8 +166,14 @@ class IO:
 
         if options.get("input") and options["input"].get("dir"):
             IO.input_dir = options["input"]["dir"]
+
         if options.get("output") and options["output"].get("dir"):
             IO.output_dir = options["output"]["dir"]
+
+        if options.get("output") and options["output"].get("results dir"):
+            IO.results_dir = options["output"]["results dir"]
+        else:
+            IO.results_dir = IO.output_dir
 
     @staticmethod
     def save_step_from_batch(orcaflexmodel, file_name, post) -> None:
@@ -168,18 +184,19 @@ class IO:
             file_name ([type]): [description]
             post ([type]): [description]
         """
-        file_name = IO.output_dir + file_name
+        output_file = IO.output_dir + file_name
         # Orcaflex input data
         if IO.save_options["batch data"]:
-            print(f'\nSaving "{file_name}.yml" file')
-            orcaflexmodel.SaveData(file_name + ".yml")
+            print(f'\nSaving "{output_file}.yml" file')
+            orcaflexmodel.SaveData(output_file + ".yml")
         # Orcaflex simulation
         if IO.save_options["batch simulation"]:
-            print(f'\nSaving "{file_name}.sim" file')
-            orcaflexmodel.SaveSimulation(file_name + ".sim")
+            print(f'\nSaving "{output_file}.sim" file')
+            orcaflexmodel.SaveSimulation(output_file + ".sim")
 
         # Post processing results
         if IO.save_options["results"]:
+            result_file = IO.results_dir + file_name
             # Format to save
             formats = post.formats
             # If no format was defined, no data is saved
@@ -189,12 +206,19 @@ class IO:
             print("\nExporting results . . .")
 
             res = post.results
-            for sim in ["statics", "dynamics", "modal"]:
+            for sim in ["statics", "dynamics"]:
                 if res[sim].empty:
                     continue
                 aux.export_results(
                     res[sim],
-                    file_name,
+                    result_file,
                     formats["batch"],
                     "_" + sim,
                 )
+
+            # Modal results -> for each line and whole system
+            if formats.get("modal") and res["modal"]:
+                for name, data in res["modal"].items():
+                    aux.export_results(
+                        data, result_file + name, formats["modal"], "_modal"
+                    )

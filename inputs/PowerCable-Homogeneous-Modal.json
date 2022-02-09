@@ -1,0 +1,87 @@
+{
+    "Actions": {
+        "load data": true,
+        "load simulation": false,
+        "generate model": false,
+        "run statics": true,
+        "run modal": true,
+        "run dynamics": false,
+        "postprocess results": false,
+        "plot results": false,
+        "batch simulations": false
+    },
+
+    "File IO": {
+        "input": {
+            "dir": "G:/Drives compartilhados/Projeto DWFOWT - Cabos/Orcaflex/Orcaflex_inputs/Homogeneous/",
+            "Orcaflex data": "HomoCable-Vessel.yml"
+        },
+        "output": {
+            "dir": "G:/Drives compartilhados/Projeto DWFOWT - Cabos/Orcaflex/Orcaflex_inputs/Homogeneous/Modal/",
+            "results dir": "G:/Drives compartilhados/Projeto DWFOWT - Cabos/Orcaflex/Modal/",
+            "Orcaflex data": "HomoCable-Vessel-Modal.yml"
+        }
+    },
+
+    "Analysis": {
+        "stage duration": [ 10.0, 20.0 ],
+        "statics": {
+            "max iterations": 300,
+            "tolerance": 1.0e-6,
+            "damping": [1.0, 10.0]
+        },
+        "modal": {
+            "lines": [
+                { 
+                    "id": 1, 
+                    "modes": [1, 40], 
+                    "shapes": true, 
+                    "include coupled": false 
+                }
+            ]
+        }
+    },
+
+    "PostProcessing": {
+        "export format": { 
+            "modal": ["excel", "csv"]
+        },
+
+        "period": { "stage": 3 },
+
+        "output definitions": {
+            "lines": {
+                "statics": {
+                    "tension": "all nodes",
+                    "position": {
+                        "all nodes": ["X", "Z", "Declination"]
+                    },
+                    "other results": {
+                        "Total mean axial strain": "all nodes"
+                    }
+                },
+                "modal": {
+                    "period": true,
+                    "global shape": true,
+                    "local shape": true,
+                    "mass": true, 
+                    "stiffness": true
+                }
+            }
+        },
+        "lines": [
+            { 
+                "id": 1, 
+                "defined": ["statics", "modal"] 
+            }
+        ]
+    },
+
+    "Save options": {
+        "Orcaflex data": true,
+        "Orcaflex simulation": false,
+        "results": true,
+        "batch simulation": false,
+        "batch data": false
+    }
+}

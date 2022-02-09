@@ -33,13 +33,17 @@ class OrcaflexModel:
             "external_functions": dict(),
         }
 
+        post.set_options(IO.input_data["PostProcessing"])
+
         self.execute_options(post)
 
     def execute_options(self, post) -> None:
         if IO.actions["load data"]:
-            print("\nLoading data . . .")
             inp = IO.input_data["File IO"]["input"]
-            self.model.LoadData(inp.get("dir", "./") + inp["Orcaflex data"])
+            input_file_name = inp.get("dir", "./") + inp["Orcaflex data"]
+
+            print(f'\nLoading data file: "{input_file_name}". . .')
+            self.model.LoadData(input_file_name)
             # Organize objects references in the dict 'orca_refs'
             self.set_orcaflex_objects_ref()
 
@@ -70,15 +74,11 @@ class OrcaflexModel:
             if IO.actions.get("batch simulations", None):
                 return None  # BatchSimulations object manages the execution
             # ...otherwise, run and postprocess directly from OrcaflexModel
-            self.analysis.run_simulation(self.model, post.results)
+            self.analysis.run_simulation(self.model, post)
 
         if IO.actions["postprocess results"]:
             print("\nPost processing results . . .")
-            post.set_options(IO.input_data["PostProcessing"])
-            post.process_simulation_results(
-                self.orca_refs.get("lines", None),
-                self.orca_refs.get("vessels", None),
-            )
+            post.process_simulation_results(self.orca_refs)
             if IO.actions["plot results"]:
                 post.plot.plot_simulation_results(post)
 
@@ -282,12 +282,12 @@ class OrcaflexModel:
             # If exist key in dict, a seed must be specified ...
             if seed_option:
                 env.UserSpecifiedRandomWaveSeeds = True
-                # ... generating randomly ...
-                if not isinstance(seed_option, int):
-                    env.WaveSeed = aux.get_seed()
-                # ... or provided by the user
+                # ...  provided by the user
+                if isinstance(seed_option, int):
+                    env.WaveSeed = seed_option
+                # ... or generated randomly ...
                 else:
-                    env.WaveSeed = aux.get_seed(seed_option)
+                    env.WaveSeed = aux.get_seed()
             # Components
             env.WaveSpectrumMinRelFrequency = wave["frequency"].get("min", 0.5)
             env.WaveSpectrumMaxRelFrequency = wave["frequency"].get("max", 10)
