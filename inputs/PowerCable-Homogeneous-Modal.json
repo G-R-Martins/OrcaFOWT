@@ -47,19 +47,10 @@
             "modal": ["excel", "csv"]
         },
 
-        "period": { "stage": 3 },
+        "period": { "stage": "static" },
 
         "output definitions": {
             "lines": {
-                "statics": {
-                    "tension": "all nodes",
-                    "position": {
-                        "all nodes": ["X", "Z", "Declination"]
-                    },
-                    "other results": {
-                        "Total mean axial strain": "all nodes"
-                    }
-                },
                 "modal": {
                     "period": true,
                     "global shape": true,
@@ -79,7 +70,7 @@
 
     "Save options": {
         "Orcaflex data": true,
-        "Orcaflex simulation": false,
+        "Orcaflex simulation": true,
         "results": true,
         "batch simulation": false,
         "batch data": false

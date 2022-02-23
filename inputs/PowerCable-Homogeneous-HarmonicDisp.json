@@ -2,7 +2,7 @@
     "Actions": {
         "load data": true,
         "load simulation": false,
-        "generate model": true,
+        "generate model": false,
         "run statics": true,
         "run modal": false,
         "run dynamics": true,
@@ -13,8 +13,12 @@
 
     "File IO": {
         "input": {
-            "dir": "D:/Guilherme_Martins/Orcaflex/Teste-Cabo/HarmonicDisp/",
-            "Orcaflex data": "Cabo-vessel.yml"
+            "dir": "G:/Drives compartilhados/Projeto DWFOWT - Cabos/Orcaflex/Orcaflex_inputs/Homogeneous/",
+            "Orcaflex data": "HomoCable-Vessel.yml"
+        },
+        "output": {
+            "dir": "G:/Drives compartilhados/Projeto DWFOWT - Cabos/Orcaflex/Orcaflex_inputs/Homogeneous/",
+            "results dir": "G:/Drives compartilhados/Projeto DWFOWT - Cabos/Orcaflex/Time_history/"
         }
     },
 
@@ -24,11 +28,11 @@
             "position": {
                 "surge": { 
                     "amplitude": 1.0, "phase": 180.0,
-                    "period": { "from": 1.0, "to": 1.5, "step": 0.5 }
+                    "period": { "from": 1.0, "to": 40.0, "step": 0.5 }
                 },
                 "heave": { 
                     "amplitude": 1.0, "phase": 180.0,
-                    "period": { "from": 1.0, "to": 1.5, "step": 0.5 } 
+                    "period": { "from": 1.0, "to": 40.0, "step": 0.5 } 
                 }
             }
         }
@@ -36,7 +40,7 @@
     
     "Analysis": {
         "statics enabled" : true,
-        "stage duration": [ 50.0, 50.0, 300.0 ],
+        "stage duration": [ 100.0, 100.0, 300.0 ],
         "statics": {
             "max iterations": 400,
             "tolerance": 1.0e-6,

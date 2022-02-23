@@ -12,7 +12,7 @@
     },
     "Save options": {
         "Orcaflex data": false,
-        "Orcaflex simulation": true,
+        "Orcaflex simulation": false,
         "results": true,
         "batch simulation": false,
         "batch data": false
@@ -20,16 +20,17 @@
     "File IO": {
         "input": {
             "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/RAO-Calc/Calibrado/",
-            "Orcaflex simulation": "FOWTC-teste.sim"
+            "# Orcaflex data": "FOWTC-withDamping-OrcaWave.yml",
+            "Orcaflex simulation": "FOWTC-withDamping-OrcaWave.sim"
         },
         "output": {
-            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/RAO-Calc/Calibrado/Results/Tests/",
-            "Orcaflex simulation": "FOWTC-teste.sim"
+            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/RAO-Calc/Calibrado/Results/",
+            "# Orcaflex simulation": "FOWTC-withDamping-OrcaWave.sim"
         }
     },
-    "Analysis": {
+    "# Analysis": {
         "statics enabled" : true,
-        "stage duration": [ 100.0, 2800.1 ],
+        "stage duration": [ 15.0, 4200.15 ],
         "dynamics": {
             "method": "implicit",
             "variable time step": false,
@@ -37,7 +38,7 @@
             "sample": 0.1
         }
     },
-    "Environment": {
+    "# Environment": {
         "wave": {
             "type": "time history", 
             "direction": 180.0, 

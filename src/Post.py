@@ -516,6 +516,8 @@ class Post:
         if definitions is None or definitions == "whole simulation":
             return orca.SpecifiedPeriod(orca.pnWholeSimulation)
         if definitions.get("stage"):
+            if definitions["stage"] == "static":
+                return orca.SpecifiedPeriod(orca.pnStaticState)
             return definitions.get("stage") - 1
         if definitions.get("specified"):
             return orca.SpecifiedPeriod(

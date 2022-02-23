@@ -10,7 +10,6 @@ class IO:
     input_dir: str = "./"  # Directory to read input file (model or simulation)
 
     input_data = dict()
-    input_file_name: str = ""
     name_no_extension: str = ""
 
     # Default actions
@@ -47,9 +46,9 @@ class IO:
         """
 
         IO.name_no_extension = file_name.replace(" ", "")
-        IO.input_file_name = inp_dir + IO.name_no_extension + ".json"
-        print(f'\nReading the input file "{IO.input_file_name}". . .')
-        return IO.read_json(IO.input_file_name)
+        input_file_name = inp_dir + IO.name_no_extension + ".json"
+        print(f'\nReading the input file "{input_file_name}". . .')
+        return IO.read_json(input_file_name)
 
     @staticmethod
     def read_json(file_name) -> bool:
@@ -110,9 +109,9 @@ class IO:
         if IO.save_options["Orcaflex data"]:
             filename = IO.name_no_extension + ".yml"
             print(f'\nSaving "{IO.output_dir + filename}" file . . .')
-            if io_data.get("File IO") and io_data["File IO"].get("input"):
+            if io_data.get("File IO") and io_data["File IO"].get("output"):
                 filename = io_data["File IO"]["output"].get(
-                    "Orcaflex data", IO.input_file_name
+                    "Orcaflex data", IO.name_no_extension
                 )
             orcaflexmodel.model.SaveData(IO.output_dir + filename)
         # Orcaflex simulation
@@ -122,13 +121,13 @@ class IO:
                     "Orcaflex simulation", IO.name_no_extension + ".sim"
                 )
             else:
-                filename = IO.input_file_name + ".sim"
+                filename = IO.name_no_extension + ".sim"
             print(f'\nSaving "{IO.output_dir + filename}" file . . .')
             orcaflexmodel.model.SaveSimulation(IO.output_dir + filename)
 
         # Post processing results
         if IO.save_options["results"]:
-            print("\nExporting results . . .")
+            print("\n\nExporting results . . .")
             # File name without extension
             filename = IO.results_dir + IO.name_no_extension
 
@@ -203,7 +202,7 @@ class IO:
             if not formats:
                 return
 
-            print("\nExporting results . . .")
+            print("\n\nExporting results . . .")
 
             res = post.results
             for sim in ["statics", "dynamics"]:

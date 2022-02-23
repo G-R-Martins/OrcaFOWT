@@ -8,40 +8,46 @@
         "run dynamics": true,
         "postprocess results": true,
         "plot results": true,
-        "batch simulations": true
+        "batch simulations": true,
+        "batch postprocess": true
     },
     "File IO": {
         "input": {
-            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/Thrust/orcina/",
+            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/Thrust/orcina_discon_0-150m-fastinputs/",
             "Orcaflex data": "K03 15MW semi-sub FOWT - TOWER & TURBINE.yml"
         },
         "output": {
-            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/Thrust/orcina/"
+            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/Thrust/orcina_discon_0-150m-fastinputs/"
         }
     },
     "Batch": {
         "thrust curve": {
-            "direction": 0.0,
-            "wind speed": { "from": 3, "to": 25, "step": 0.5 },
+            "direction": 180.0,
+            "wind speed": [3, 4, 6.9, 8, 10, 10.5, 11, 11.5, 12, 13, 15, 20, 24, 25],
+            "#wind speed": { "from": 3.0, "to": 12.0, "step": 0.5 },
             "profile": { 
+                "#height": [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 300],
+                "#factor": [0, 0.6211593464458851, 0.6844586616232927, 0.72443596007499, 0.7542085008487643, 0.7781419427958496, 0.7982596905316156, 0.8156742455850383, 0.8310662055228825, 0.844883785863622, 0.8574385876449117, 0.868956428107873, 0.8796064367948674, 0.8895187228272617, 0.8987956240989486, 0.9075191553171609, 0.915756103497827, 0.9235616125062309, 0.9309817659643239, 0.9380554877428029, 0.9448159662759438, 0.9512917395348562, 0.9575075336059315, 0.9634849193438513, 0.969242832662261, 0.9747979912121477, 0.9801652313513887, 0.9853577830970106, 0.9903874963221427, 0.9952650282562083, 1, 1],
                 "reference height": 150.0,
-                "height": { "from": 0.0, "to": 280.0, "step": 5.0 },
-                "expoent": 0.14
+                "expoent": 0.14,
+                "height": { "from": 0.0, "to": 150, "step": 5.0 }
             },
             "monitors": {
                 "rotor": ["Ct", "Cp", "Lz force"],
                 "generator": ["torque", "power", "angular velocity"],
+                "connection": ["GZ force", "Lz force"],
                 "specific blade": [
-                    { "id": 1, "vars": ["Blade pitch"] }
+                    { "id": 1, "vars": ["Blade pitch"] },
+                    { "id": 2, "vars": ["Blade pitch"] }
                 ],
-                "others": ["Angular velocity"]
+                "others": ["Angular velocity", "Generator power (96.55%)"]
                 
             }
         }
     },
     "Analysis": {
         "statics enabled" : true,
-        "stage duration": [ 600.0, 300.0 ],
+        "stage duration": [ 600.0, 50.0 ],
         "statics": {
             "max iterations": 400,
             "tolerance": 1.0e-6,
@@ -62,16 +68,16 @@
         "plots": {
             "thrust curve": {
                 "same fig": true,
-                "group": [4, 2]
+                "group": [4, 3]
             }
         },
         "export format": { 
-            "batch": ["excel", "csv"]
+            "batch": ["excel"]
         } 
     },
     "Save options": {
         "results": true,
-        "batch simulation": false,
+        "batch simulation": true,
         "batch data": true
     }
 }

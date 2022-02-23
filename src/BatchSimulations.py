@@ -28,8 +28,6 @@ class BatchSimulations:
         Args:
             post (Post): [description]
         """
-        # Post options -> plot definitions and period
-        post.set_options(IO.input_data["PostProcessing"])
 
 
 class ThrustCurve(BatchSimulations):
@@ -47,11 +45,7 @@ class ThrustCurve(BatchSimulations):
         opt = IO.input_data["Batch"]["thrust curve"]
 
         # wind speed range to simulate
-        self.eval_range = np.arange(
-            opt["wind speed"]["from"],
-            opt["wind speed"]["to"] + opt["wind speed"]["step"],
-            opt["wind speed"]["step"],
-        )
+        self.eval_range = aux.get_range_or_list(opt["wind speed"])
 
         self.vars_to_eval, self.names = self.set_vars_to_eval(opt["monitors"])
 
@@ -100,6 +94,10 @@ class ThrustCurve(BatchSimulations):
         if "generator" in keys:
             to_eval["vars"].extend(
                 ["Generator " + var_name for var_name in opt["generator"]]
+            )
+        if "connection" in keys:
+            to_eval["vars"].extend(
+                ["Connection " + var_name for var_name in opt["connection"]]
             )
         # other variables defined just with its name (eg Angular Velocity)
         if "others" in keys:
@@ -168,6 +166,9 @@ class ThrustCurve(BatchSimulations):
 
         if opt is None:
             return None
+
+        if isinstance(opt["height"], list) and isinstance(opt["factor"], list):
+            return {"height": opt["height"], "vertical factor": opt["factor"]}
 
         height = aux.get_range_or_list(opt["height"])
         h_ref = opt["reference height"]

@@ -202,7 +202,7 @@ class OrcaflexModel:
         environment.CurrentRamped = sea_current.get("is ramped", True)
 
     def set_wave(self, wave) -> None:
-        # TODO: Time history, Response calculation,
+        # TODO: Response calculation,
         # ISSC, Ochi-Hubble, Gaussian swell, Torsethaugen,
         env = self.model.environment
 
