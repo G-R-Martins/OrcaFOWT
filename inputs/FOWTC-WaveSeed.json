@@ -1,0 +1,66 @@
+{
+    "Actions": {
+        "load data": false,
+        "load simulation": true,
+        "generate model": true,
+        "run statics": true,
+        "run modal": false,
+        "run dynamics": true,
+        "postprocess results": true,
+        "plot results": false,
+        "batch simulations": true
+    },
+    "Save options": {
+        "Orcaflex data": false,
+        "Orcaflex simulation": false,
+        "results": false,
+        "batch simulation": false,
+        "batch data": true
+    },
+    "File IO": {
+        "input": {
+            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/RAO-Calc/Calibrado/",
+            "Orcaflex simulation": "FOWTC-withDamping-OrcaWave.sim"
+        },
+        "output": {
+            "dir": "D:/Guilherme_Martins/Orcaflex/FOWTC/RAO-Calc/Calibrado/Results/Seeds/",
+            "Orcaflex simulation": "FOWTC-withDamping-waveseed.sim"
+        }
+    },
+    "Analysis": {
+        "statics enabled" : true,
+        "stage duration": [ 100.0, 100.0 ],
+        "dynamics": {
+            "method": "implicit",
+            "variable time step": false,
+            "time step": 0.5,
+            "sample": 0.5
+        }
+    },
+    "Batch": {
+        "wave seed": {
+            "number of cases": 5, 
+            "seed generator": 491616
+        }
+    },  
+    "Environment": {
+        "wave": {
+            "type": "JONSWAP", "seed": "set", "parameters": "fully specified", 
+            "direction": 180.0, "Hs": 5.0, "Tz": 10.0,  "origin": [0.0, 0.0], "time origin": 0.0, 
+            "directions": 1, "spreading exponent": 20, "discretisation": "arithmetic",
+            "gamma": 1.0, "alpha": 0.02, "sigma1": 0.05, "sigma2": 0.1, "fm": 0.09, "Tp": 11, 
+            "components": 100, "max component": 0.05, "frequency": {"min": 0.5, "max": 12.0} 
+        }
+    },
+    "PostProcessing": {
+        "period": { "stage": 2 },
+        "export format": { "dynamics": "csv" },
+        "platforms": [
+            { 
+                "id": 1,
+                "position": { "dofs": "all" },
+                "point": [0.0, 0.0, 0.0]
+            }
+        ]
+    }
+}

@@ -14,7 +14,7 @@ post = Post()
 def main():
     t0 = datetime.now()  # Start counting time
 
-    IO.read_input("PowerCable-Homogeneous-Modal", "inputs/")
+    IO.read_input("FOWTC-EvalThrust", "inputs/")
 
     # Reference model
     orca_model = OrcaflexModel(post)
@@ -25,7 +25,7 @@ def main():
 
     IO.save(orca_model, post)
 
-    print(f"\nElapsed time: {datetime.now() - t0} \n\nEnd execution!")
+    print(f"\n\nElapsed time: {datetime.now() - t0} \n\nEnd execution!")
 
     plt.show()  # show plots (if created during postprocessing)
 
